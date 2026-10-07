@@ -1,0 +1,311 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark light">
+<title>Party Queue</title>
+<style>
+  :root { --bg:#14151a; --card:#1e2028; --line:#2c2f3a; --text:#eceef4; --muted:#9aa0b4; --accent:#6c8cff; --danger:#ff6b6b; --ok:#4cc38a; }
+  @media (prefers-color-scheme: light) {
+    :root { --bg:#f4f5f9; --card:#fff; --line:#dfe2ec; --text:#14151a; --muted:#5d6376; --accent:#3d5afe; --danger:#d93a3a; --ok:#1f9d63; }
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font:16px/1.4 system-ui, sans-serif;
+         padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom); }
+  main { max-width: 640px; margin: 0 auto; padding: 12px 14px 80px; }
+  h1 { font-size: 20px; margin: 8px 0 12px; }
+  h2 { font-size: 15px; color: var(--muted); font-weight: 600; margin: 18px 0 6px; text-transform: uppercase; letter-spacing: .04em; }
+  .card { background: var(--card); border:1px solid var(--line); border-radius: 12px; padding: 12px; }
+  .row { display:flex; align-items:center; gap:10px; }
+  .grow { flex:1; min-width:0; }
+  input[type=text] { width:100%; padding: 12px; border-radius: 10px; border:1px solid var(--line); background: var(--card); color: var(--text); font-size:16px; }
+  button { font: inherit; padding: 10px 14px; border-radius: 10px; border:1px solid var(--line); background: var(--card); color: var(--text); cursor:pointer; }
+  button.primary { background: var(--accent); border-color: var(--accent); color:#fff; }
+  button.danger { color: var(--danger); }
+  button.small { padding: 6px 10px; font-size: 14px; }
+  button:disabled { opacity:.5; }
+  .item { display:flex; align-items:center; gap:10px; padding:8px 0; border-bottom:1px solid var(--line); }
+  .item:last-child { border-bottom:none; }
+  .item img { width:64px; height:36px; object-fit:cover; border-radius:6px; background:var(--line); flex:none; }
+  .title { overflow:hidden; text-overflow:ellipsis; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; }
+  .sub { color: var(--muted); font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .tabs { display:flex; gap:6px; margin: 14px 0 6px; overflow-x:auto; }
+  .tabs button { white-space:nowrap; }
+  .tabs button.on { background: var(--accent); border-color: var(--accent); color:#fff; }
+  .badge { display:inline-block; min-width:18px; padding:0 6px; border-radius:9px; background:var(--danger); color:#fff; font-size:12px; margin-left:6px; }
+  .pill { font-size:12px; padding:2px 8px; border-radius:10px; border:1px solid var(--line); color:var(--muted); }
+  .pill.host { color: var(--ok); border-color: var(--ok); }
+  #toast { position:fixed; left:50%; bottom: calc(16px + env(safe-area-inset-bottom)); transform:translateX(-50%); background:#000d; color:#fff; padding:10px 16px; border-radius:10px; max-width:90%; z-index:9; display:none; }
+  .bar { height:4px; background:var(--line); border-radius:2px; margin-top:8px; overflow:hidden; }
+  .bar > div { height:100%; background: var(--accent); width:0; transition: width .9s linear; }
+  .ctl { display:flex; gap:8px; margin-top:10px; }
+  .muted { color: var(--muted); }
+  .hidden { display:none !important; }
+</style>
+</head>
+<body>
+<main>
+  <div id="join" class="hidden">
+    <h1>Dołącz do imprezy</h1>
+    <div class="card">
+      <p class="muted" style="margin-top:0">Podaj imię, żeby inni wiedzieli, kto proponuje utwory.</p>
+      <input id="name" type="text" maxlength="24" placeholder="Twoje imię" autocomplete="nickname">
+      <p id="joinErr" style="color:var(--danger)"></p>
+      <button id="joinBtn" class="primary" style="width:100%">Dołącz</button>
+    </div>
+  </div>
+
+  <div id="app" class="hidden">
+    <div class="row">
+      <h1 class="grow" id="hello"></h1>
+      <span id="role" class="pill"></span>
+    </div>
+
+    <div class="card">
+      <div class="row">
+        <img id="npThumb" alt="" style="width:96px;height:54px;object-fit:cover;border-radius:8px;background:var(--line)">
+        <div class="grow">
+          <div class="sub">Teraz gra</div>
+          <div id="npTitle" class="title"></div>
+          <div id="npSub" class="sub"></div>
+        </div>
+      </div>
+      <div class="bar"><div id="npBar"></div></div>
+      <div id="hostCtl" class="ctl hidden">
+        <button id="bPrev">⏮</button>
+        <button id="bToggle">⏯</button>
+        <button id="bNext">⏭</button>
+      </div>
+    </div>
+
+    <div id="notice" class="card hidden" style="margin-top:10px;color:var(--danger)"></div>
+
+    <div class="tabs" id="tabs"></div>
+
+    <section id="tab-queue"></section>
+
+    <section id="tab-add" class="hidden">
+      <div class="row">
+        <div class="grow"><input id="q" type="text" placeholder="Szukaj utworu lub wklej link" enterkeyhint="search"></div>
+        <button id="qBtn" class="primary">Szukaj</button>
+      </div>
+      <div id="results" class="card hidden" style="margin-top:10px"></div>
+      <h2>Moje propozycje</h2>
+      <div id="mine" class="card"></div>
+      <div id="reqBox" style="margin-top:14px"></div>
+    </section>
+
+    <section id="tab-proposals" class="hidden"></section>
+    <section id="tab-guests" class="hidden"></section>
+    <section id="tab-playlist" class="hidden"></section>
+  </div>
+</main>
+<div id="toast"></div>
+
+<script>
+(() => {
+  'use strict';
+  const $ = (id) => document.getElementById(id);
+  const el = (tag, props = {}, ...kids) => {
+    const n = document.createElement(tag);
+    for (const [k, v] of Object.entries(props)) {
+      if (k === 'class') n.className = v;
+      else if (k === 'on') for (const [ev, fn] of Object.entries(v)) n.addEventListener(ev, fn);
+      else if (v !== undefined && v !== null) n.setAttribute(k, v);
+    }
+    for (const kid of kids.flat()) if (kid !== null && kid !== undefined && kid !== false) n.append(kid.nodeType ? kid : document.createTextNode(String(kid)));
+    return n;
+  };
+
+  const params = new URLSearchParams(location.search);
+  let secret = params.get('j') || sessionStorage.getItem('pq_secret') || '';
+  if (params.get('j')) sessionStorage.setItem('pq_secret', secret);
+  let token = localStorage.getItem('pq_token') || '';
+  let state = null, ws = null, tab = 'queue', results = [];
+
+  function toast(msg) {
+    const t = $('toast'); t.textContent = msg; t.style.display = 'block';
+    clearTimeout(toast.h); toast.h = setTimeout(() => t.style.display = 'none', 3200);
+  }
+
+  async function api(path, body, method) {
+    const r = await fetch(path, {
+      method: method || (body === undefined ? 'GET' : 'POST'),
+      headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+      body: body === undefined ? undefined : JSON.stringify(body),
+    });
+    let data = {};
+    try { data = await r.json(); } catch (e) {}
+    if (r.status === 401) { logout(); throw new Error('Sesja wygasła'); }
+    if (!r.ok) throw new Error(data.error || 'Błąd ' + r.status);
+    return data;
+  }
+  const act = (path, body) => api(path, body || {}).catch((e) => toast(e.message));
+
+  function logout() {
+    localStorage.removeItem('pq_token'); token = '';
+    if (ws) { ws.onclose = null; ws.close(); ws = null; }
+    $('app').classList.add('hidden'); $('join').classList.remove('hidden');
+    $('name').value = localStorage.getItem('pq_name') || '';
+  }
+
+  $('joinBtn').onclick = async () => {
+    $('joinErr').textContent = '';
+    const name = $('name').value.trim();
+    if (!name) { $('joinErr').textContent = 'Podaj imię'; return; }
+    try {
+      const r = await fetch('/api/join', { method: 'POST', body: JSON.stringify({ name, secret }) });
+      const data = await r.json();
+      if (!r.ok) throw new Error(data.error || 'Nie udało się dołączyć');
+      token = data.token; localStorage.setItem('pq_token', token); localStorage.setItem('pq_name', name);
+      history.replaceState(null, '', location.pathname);
+      start();
+    } catch (e) { $('joinErr').textContent = e.message; }
+  };
+  $('name').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('joinBtn').click(); });
+
+  function connect() {
+    if (ws) return;
+    ws = new WebSocket((location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + '/ws?token=' + encodeURIComponent(token));
+    ws.onmessage = (e) => { state = JSON.parse(e.data); render(); };
+    ws.onclose = () => { ws = null; if (token) setTimeout(connect, 1500); };
+  }
+
+  async function start() {
+    try {
+      state = await api('/api/state');
+    } catch (e) { return; }
+    $('join').classList.add('hidden'); $('app').classList.remove('hidden');
+    render(); connect();
+  }
+
+  const isHost = () => state && state.me.role === 'HOST';
+
+  function fmt(ms) { const s = Math.floor(ms / 1000); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); }
+
+  function item(t, actions, sub) {
+    return el('div', { class: 'item' },
+      el('img', { src: t.thumb, alt: '', loading: 'lazy' }),
+      el('div', { class: 'grow' }, el('div', { class: 'title' }, t.title),
+        el('div', { class: 'sub' }, sub !== undefined ? sub : [t.channel, t.dur].filter(Boolean).join(' · '))),
+      actions || null);
+  }
+  const btn = (label, fn, cls) => el('button', { class: 'small ' + (cls || ''), on: { click: fn } }, label);
+
+  function renderTabs() {
+    const host = isHost();
+    const tabs = [['queue', 'Kolejka'], ['add', 'Dodaj']];
+    if (host) tabs.push(['proposals', 'Propozycje', state.proposals.length], ['guests', 'Goście', state.guests.filter(g => g.hostRequested).length], ['playlist', 'Playlista']);
+    if (!tabs.some(t => t[0] === tab)) tab = 'queue';
+    $('tabs').replaceChildren(...tabs.map(([id, label, n]) =>
+      el('button', { class: id === tab ? 'on' : '', on: { click: () => { tab = id; render(); } } }, label, n ? el('span', { class: 'badge' }, n) : null)));
+    for (const id of ['queue', 'add', 'proposals', 'guests', 'playlist']) $('tab-' + id).classList.toggle('hidden', id !== tab);
+  }
+
+  function render() {
+    if (!state) return;
+    const host = isHost();
+    $('hello').textContent = state.me.name;
+    const role = $('role'); role.textContent = host ? 'host' : 'gość'; role.classList.toggle('host', host);
+
+    const now = state.now, tr = now.track;
+    $('npTitle').textContent = tr ? tr.title : 'Nic nie gra';
+    $('npThumb').src = tr ? tr.thumb : '';
+    $('npThumb').style.visibility = tr ? 'visible' : 'hidden';
+    $('npSub').textContent = !tr ? (state.playlist ? 'Playlista: ' + state.playlist : '') :
+      now.status === 'loading' ? 'Ładowanie…' : now.status === 'ad' ? 'Reklama' : fmt(now.pos) + ' / ' + fmt(now.dur) + (tr.by ? ' · ' + tr.by : '');
+    $('npBar').style.width = now.dur ? Math.min(100, now.pos / now.dur * 100) + '%' : '0';
+    $('hostCtl').classList.toggle('hidden', !host);
+    $('bToggle').textContent = now.status === 'playing' ? '⏸' : '▶';
+    const nb = $('notice'); nb.textContent = state.notice || ''; nb.classList.toggle('hidden', !state.notice);
+
+    renderTabs();
+
+    $('tab-queue').replaceChildren(state.queue.length === 0 ? el('p', { class: 'muted' }, 'Kolejka jest pusta.') :
+      el('div', { class: 'card' }, state.queue.map((t) => item(t, host ? el('div', { class: 'row' },
+        btn('▲', () => act('/api/queue/' + t.uid + '/up')), btn('▼', () => act('/api/queue/' + t.uid + '/down')),
+        btn('▶', () => act('/api/queue/' + t.uid + '/playnow')), btn('✕', () => act('/api/queue/' + t.uid + '/remove'), 'danger')) : null,
+        [t.channel, t.dur, t.src === 'PLAYLIST' ? '' : 'dodał(a) ' + t.by].filter(Boolean).join(' · ')))));
+
+    const mine = state.proposals.filter((p) => p.byId === state.me.id);
+    $('mine').replaceChildren(...(mine.length === 0
+      ? [el('span', { class: 'muted' }, host ? 'Jako host dodajesz utwory od razu.' : 'Nic nie czeka na akceptację.')]
+      : mine.map((p) => item(p, null, 'czeka na akceptację'))));
+
+    const rb = $('reqBox');
+    if (host) rb.replaceChildren();
+    else if (state.me.hostRequested) rb.replaceChildren(el('p', { class: 'muted' }, 'Prośba o uprawnienia hosta czeka na akceptację.'));
+    else rb.replaceChildren(el('button', { on: { click: async () => { await act('/api/hostrequest'); toast('Wysłano prośbę do hosta'); } } }, 'Poproś o uprawnienia hosta'));
+
+    if (host) {
+      $('tab-proposals').replaceChildren(state.proposals.length === 0 ? el('p', { class: 'muted' }, 'Brak propozycji.') :
+        el('div', { class: 'card' }, state.proposals.map((p) => item(p, el('div', { class: 'row' },
+          btn('Odrzuć', () => act('/api/proposals/' + p.id + '/reject')), btn('Zatwierdź', () => act('/api/proposals/' + p.id + '/approve'), 'primary')),
+          p.by + ' · ' + (p.channel || '')))));
+
+      $('tab-guests').replaceChildren(state.guests.length === 0 ? el('p', { class: 'muted' }, 'Nikt jeszcze nie dołączył.') :
+        el('div', { class: 'card' }, state.guests.map((g) => el('div', { class: 'item' },
+          el('div', { class: 'grow' }, el('div', { class: 'title' }, (g.online ? '● ' : '○ ') + g.name),
+            el('div', { class: 'sub' }, g.role === 'HOST' ? 'Współhost' : g.hostRequested ? 'Prosi o uprawnienia hosta' : 'Gość')),
+          el('div', { class: 'row' },
+            g.hostRequested ? [btn('Odrzuć', () => act('/api/guests/' + g.id + '/reject')), btn('Zatwierdź', () => act('/api/guests/' + g.id + '/approve'), 'primary')] : null,
+            g.role === 'HOST' && g.id !== state.me.id ? btn('Odbierz host', () => act('/api/guests/' + g.id + '/demote')) : null,
+            g.id !== state.me.id ? btn('Usuń', () => confirm('Usunąć ' + g.name + '?') && act('/api/guests/' + g.id + '/kick'), 'danger') : null)))));
+
+      if (!$('plUrl')) {
+        $('tab-playlist').replaceChildren(
+          el('p', { class: 'muted' }, 'Wczytanie playlisty zastępuje utwory z poprzedniej playlisty. Zatwierdzone propozycje zostają.'),
+          el('input', { id: 'plUrl', type: 'text', placeholder: 'Link do publicznej playlisty YouTube' }),
+          el('label', { style: 'display:block;margin:10px 0' }, el('input', { id: 'plShuffle', type: 'checkbox', checked: 'checked' }), ' Losowa kolejność'),
+          el('button', { class: 'primary', on: { click: async (e) => {
+            e.target.disabled = true;
+            try { await api('/api/playlist', { url: $('plUrl').value, shuffle: $('plShuffle').checked }); toast('Playlista wczytana'); } catch (er) { toast(er.message); }
+            e.target.disabled = false; } } }, 'Wczytaj playlistę'));
+      }
+    } else if ($('plUrl')) {
+      $('tab-playlist').replaceChildren();
+    }
+
+    renderResults();
+  }
+
+  function renderResults() {
+    const box = $('results');
+    box.classList.toggle('hidden', results.length === 0);
+    box.replaceChildren(...results.map((m) => item(m, isHost() ?
+      el('div', { class: 'row' }, btn('Następna', () => propose(m, true)), btn('Dodaj', () => propose(m, false), 'primary')) :
+      btn('Zaproponuj', () => propose(m, false), 'primary'))));
+  }
+
+  async function propose(m, next) {
+    try {
+      await api('/api/propose', { videoId: m.vid, next });
+      toast(isHost() ? 'Dodano do kolejki' : 'Wysłano propozycję do hosta');
+    } catch (e) { toast(e.message); }
+  }
+
+  async function search() {
+    const q = $('q').value.trim();
+    if (!q) return;
+    $('qBtn').disabled = true; $('qBtn').textContent = 'Szukam…';
+    try {
+      const r = await api('/api/search?q=' + encodeURIComponent(q));
+      results = r.results || [];
+      if (!results.length) toast('Nic nie znaleziono');
+      renderResults();
+    } catch (e) { toast(e.message); }
+    $('qBtn').disabled = false; $('qBtn').textContent = 'Szukaj';
+  }
+  $('qBtn').onclick = search;
+  $('q').addEventListener('keydown', (e) => { if (e.key === 'Enter') search(); });
+  $('bToggle').onclick = () => act('/api/player/toggle');
+  $('bNext').onclick = () => act('/api/player/next');
+  $('bPrev').onclick = () => act('/api/player/prev');
+
+  if (token) start().then(() => { if (!state) logout(); }); else logout();
+  if (token === '' && !secret) $('joinErr').textContent = 'Zeskanuj kod QR od hosta, żeby dołączyć.';
+})();
+</script>
+</body>
+</html>
