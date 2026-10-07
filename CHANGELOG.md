@@ -8,6 +8,8 @@ git tag `v<version>`.
 ## [Unreleased]
 
 ### Added
+- Reorder the queue by holding a row and dragging it (it lifts, follows the finger, and the list scrolls at the
+  edges so a song can be carried far); the ▲▼ buttons are gone from the host screen.
 - Queue gestures: swipe a row right to play it now (green), left to remove it (red); after a few seconds without
   touching the list the first rows slide sideways to show this. *Wyczyść kolejkę* empties the queue (with confirmation;
   also for co-hosts on the guest page and via `POST /api/queue/clear`).

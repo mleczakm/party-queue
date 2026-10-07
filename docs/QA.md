@@ -50,6 +50,8 @@ Use a real phone, not an emulator. Note the phone model and Android version in t
 - [ ] Swipe the app away from recents: the notification and playback survive or stop cleanly (note which).
 
 **Queue gestures**
+- [ ] Hold a row for ~half a second: the phone vibrates, the row lifts and follows the finger; neighbours step aside; releasing keeps the new place.
+- [ ] While holding a row near the top or bottom edge of the list the list scrolls; a song can be carried across a 100-song queue.
 - [ ] Swipe a row right: the song plays now and leaves the queue. Swipe left: it is removed. A short, slow drag springs back.
 - [ ] Leave the queue alone for ~6 s: the first three rows slide right (green, play icon) then left (red, bin icon).
 - [ ] *Wyczyść kolejkę* asks for confirmation, empties the queue, keeps the current song, and the queue does not refill itself.

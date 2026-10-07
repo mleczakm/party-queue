@@ -2,7 +2,14 @@ package pl.mleczki.partyqueue
 
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
+import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.zIndex
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.offset
 import androidx.compose.material.icons.Icons
@@ -247,6 +254,8 @@ private fun SwipeRow(
     hintIndex: Int,
     onPlayNow: () -> Unit,
     onRemove: () -> Unit,
+    modifier: Modifier = Modifier,
+    dragModifier: Modifier = Modifier,
     content: @Composable () -> Unit,
 ) {
     val offset = remember { Animatable(0f) }
@@ -276,7 +285,7 @@ private fun SwipeRow(
     }
 
     val progress = (abs(offset.value) / (width * 0.3f)).coerceIn(0f, 1f)
-    Box(Modifier.fillMaxWidth().onSizeChanged { width = it.width.toFloat() }) {
+    Box(modifier.fillMaxWidth().onSizeChanged { width = it.width.toFloat() }) {
         if (offset.value != 0f) {
             val playing = offset.value > 0
             Box(
@@ -305,6 +314,8 @@ private fun SwipeRow(
                         scope.launch { offset.snapTo((offset.value + drag).coerceIn(-width, width)) }
                     }
                 }
+                // Inner modifier: a long press claims the touch before the sideways swipe can.
+                .then(dragModifier)
         ) { content() }
     }
 }
@@ -317,17 +328,50 @@ private fun QueueTab(state: State<Snapshot>, party: PartyController) {
     var confirmClear by remember { mutableStateOf(false) }
     var lastTouch by remember { mutableLongStateOf(System.currentTimeMillis()) }
     var hint by remember { mutableIntStateOf(0) }
+    val listState = rememberLazyListState()
+    val haptics = LocalHapticFeedback.current
+    var draggedUid by remember { mutableStateOf<String?>(null) }
+    var dragDelta by remember { mutableFloatStateOf(0f) }
 
     // When nobody touches the list for a while, the first rows slide sideways to show what the gestures do.
     LaunchedEffect(Unit) {
         while (true) {
             delay(1_000)
             val now = System.currentTimeMillis()
-            if (queue.isNotEmpty() && now - lastTouch > IDLE_HINT_MS) {
+            if (queue.isNotEmpty() && draggedUid == null && now - lastTouch > IDLE_HINT_MS) {
                 hint++
                 lastTouch = now + 10_000
             }
         }
+    }
+
+    // Holding a row near the top or bottom edge scrolls the list so it can be carried a long way.
+    LaunchedEffect(draggedUid) {
+        val uid = draggedUid ?: return@LaunchedEffect
+        while (draggedUid == uid) {
+            val info = listState.layoutInfo
+            val cur = info.visibleItemsInfo.firstOrNull { it.key == uid }
+            if (cur != null) {
+                val centre = cur.offset + dragDelta + cur.size / 2f
+                val edge = 110f
+                val step = when {
+                    centre < info.viewportStartOffset + edge -> -22f
+                    centre > info.viewportEndOffset - edge -> 22f
+                    else -> 0f
+                }
+                if (step != 0f) dragDelta += listState.scrollBy(step)
+            }
+            delay(16)
+        }
+    }
+
+    /** One finger move: swap the dragged row with the neighbour it has been carried over, one slot at a time. */
+    fun dragBy(uid: String, dy: Float) {
+        dragDelta += dy
+        val rows = listState.layoutInfo.visibleItemsInfo.map { RowInfo(it.key, it.index, it.offset, it.size) }
+        val swap = nextSwap(rows, queue.map { it.uid }, uid, dragDelta) ?: return
+        party.move(uid, swap.delta)
+        dragDelta += swap.shift
     }
 
     if (queue.isEmpty()) {
@@ -348,7 +392,7 @@ private fun QueueTab(state: State<Snapshot>, party: PartyController) {
             Column(Modifier.weight(1f)) {
                 Text("W kolejce: ${queue.size}", style = MaterialTheme.typography.titleSmall)
                 Text(
-                    "W prawo: graj teraz · w lewo: usuń",
+                    "W prawo: graj teraz · w lewo: usuń · przytrzymaj i przesuń: zmień kolejność",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -359,15 +403,40 @@ private fun QueueTab(state: State<Snapshot>, party: PartyController) {
             ) { Text("Wyczyść kolejkę") }
         }
         HorizontalDivider()
-        LazyColumn(Modifier.weight(1f).fillMaxWidth()) {
+        LazyColumn(Modifier.weight(1f).fillMaxWidth(), state = listState) {
             itemsIndexed(queue, key = { _, t -> t.uid }) { index, t ->
                 val sub = listOfNotNull(t.channel.ifBlank { null }, t.duration, if (t.source == Source.PLAYLIST) null else "dodał(a) ${t.addedBy}")
                     .joinToString(" · ")
-                SwipeRow(hint, index, onPlayNow = { party.playNow(t.uid) }, onRemove = { party.remove(t.uid) }) {
-                    TrackRow(t.title, sub) {
-                        Mini("▲") { party.move(t.uid, -1) }
-                        Mini("▼") { party.move(t.uid, 1) }
-                    }
+                val dragged = draggedUid == t.uid
+                SwipeRow(
+                    hint, index,
+                    onPlayNow = { party.playNow(t.uid) },
+                    onRemove = { party.remove(t.uid) },
+                    modifier = Modifier
+                        .zIndex(if (dragged) 1f else 0f)
+                        .graphicsLayer {
+                            translationY = if (dragged) dragDelta else 0f
+                            scaleX = if (dragged) 1.03f else 1f
+                            scaleY = if (dragged) 1.03f else 1f
+                            shadowElevation = if (dragged) 24f else 0f
+                        },
+                    dragModifier = Modifier.pointerInput(t.uid) {
+                        detectDragGesturesAfterLongPress(
+                            onDragStart = {
+                                draggedUid = t.uid
+                                dragDelta = 0f
+                                haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                            },
+                            onDrag = { change, amount ->
+                                change.consume()
+                                dragBy(t.uid, amount.y)
+                            },
+                            onDragEnd = { draggedUid = null; dragDelta = 0f },
+                            onDragCancel = { draggedUid = null; dragDelta = 0f },
+                        )
+                    },
+                ) {
+                    TrackRow(t.title, sub) {}
                 }
             }
         }
