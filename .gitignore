@@ -1,0 +1,19 @@
+# Gradle / Android
+.gradle/
+.kotlin/
+build/
+local.properties
+*.iml
+.idea/
+captures/
+*.apk
+*.aab
+*.keystore
+*.jks
+
+# Third-party add-ons are downloaded and checksum-verified by scripts/fetch-addons.sh
+app/src/main/assets/extensions/ublock/
+app/src/main/assets/extensions/bgplay/
+
+# macOS
+.DS_Store

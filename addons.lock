@@ -1,0 +1,4 @@
+# name|version|download url|sha256 of the .xpi|licence
+# Third-party Firefox add-ons bundled (unpacked) into the app by scripts/fetch-addons.sh.
+ublock|1.75.0|https://addons.mozilla.org/firefox/downloads/file/5034826/ublock_origin-1.75.0.xpi|5b74415860456370644bd80f16125e865b0e6c356bb5dfcfb84069967eaa5287|GPL-3.0
+bgplay|1.1.0|https://addons.mozilla.org/firefox/downloads/file/4956588/play_yt_video_in_background-1.1.0.xpi|53467f5108b6d5f9b4355d2f91be0cb062168f0faf1211c805cdaa5d716c2c70|AGPL-3.0
