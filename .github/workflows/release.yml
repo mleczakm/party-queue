@@ -1,0 +1,52 @@
+name: Release
+
+# Push a tag such as v0.2.0 (created by scripts/release.sh) to publish a GitHub release.
+on:
+  push:
+    tags: ['v*.*.*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Tag must match version.properties
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          declared="$(sed -n 's/^versionName=//p' version.properties)"
+          if [ "$tag" != "$declared" ]; then
+            echo "Tag v$tag does not match version.properties ($declared)" >&2
+            exit 1
+          fi
+          grep -q "^## \[$tag\]" CHANGELOG.md || { echo "CHANGELOG.md has no section for $tag" >&2; exit 1; }
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: android-actions/setup-android@v3
+      - run: sdkmanager "platforms;android-37.1" "build-tools;37.0.0"
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Lint, test, assemble
+        run: ./gradlew lintDebug testDebugUnitTest assembleRelease --console=plain
+
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          apk="party-queue-${version}.apk"
+          cp app/build/outputs/apk/release/app-release.apk "$apk"
+          sha256sum "$apk" > "$apk.sha256"
+          awk -v v="$version" '$0 ~ "^## \\[" v "\\]" {on=1; next} /^## \[/ {on=0} on' CHANGELOG.md > notes.md
+          {
+            echo
+            echo "> This APK is signed with the public Android debug key so it can be sideloaded (Android 10+, arm64); it is not a Play Store build. Verify the download against the attached .sha256 file."
+          } >> notes.md
+          gh release create "$GITHUB_REF_NAME" "$apk" "$apk.sha256" --title "Party Queue $version" --notes-file notes.md
