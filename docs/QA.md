@@ -53,7 +53,9 @@ Use a real phone, not an emulator. Note the phone model and Android version in t
 - [ ] The tab shows one YouTube page; the player is not visible as a second window.
 - [ ] Open a public playlist page: *Importuj playlistę* fills the queue and does **not** interrupt the song that is playing.
 - [ ] Open a video page: *Dodaj do kolejki* and *Jako następny* put it in the right place.
-- [ ] Music keeps playing, without stutter, while you browse and while the queue list is visible.
+- [ ] Music keeps playing, without stutter, while you browse, while the queue list is visible, and after switching tabs.
+  (Objective check: a pane that is too small makes YouTube pause the video; the position shown under the title must advance
+  one second per second.)
 - [ ] Optional: sign in (*Zaloguj się*), open a private playlist, import it. (Not verified yet; see CHANGELOG.)
 
 **Guests**

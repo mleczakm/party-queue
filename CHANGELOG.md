@@ -29,6 +29,10 @@ First public version.
 - Picture and sound stuttered once a second while the queue list was visible: the whole screen was rebuilt on
   every playback tick; now only the now-playing bar updates.
 - Blank player pane after restart or after closing the app with BACK (BACK now hides the app).
+- Music stuttered once a second when the YouTube page was small or hidden (for example on the YouTube tab):
+  YouTube paused a video it thought nobody could see and the app resumed it again. The player page can no longer
+  pause itself; the app's own pause button still works. The bridge also acts only on the page's main `<video>`
+  element instead of any spare one.
 
 [Unreleased]: https://github.com/mleczakm/party-queue/compare/v0.1.0...HEAD
 [0.1.0]: https://github.com/mleczakm/party-queue/releases/tag/v0.1.0

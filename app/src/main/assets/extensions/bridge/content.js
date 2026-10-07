@@ -60,11 +60,31 @@
   }
 
   // ---------------------------------------------------------------- player mode
+  // YouTube pauses a video it thinks nobody can see (small or hidden player, covered screen). The queue must keep
+  // playing, so the page loses the ability to pause. Pauses from the app go through the element directly
+  // (this script sees the native method), so the host's pause button still works.
+  try {
+    const proto = window.wrappedJSObject.HTMLMediaElement.prototype;
+    exportFunction(function () { /* ignored: only the app decides */ }, proto, { defineAs: "pause" });
+  } catch (e) {
+    log("could not neutralise page pauses: " + e);
+  }
+
   let video = null;
   let lastTick = 0;
   let hostPaused = false;
 
   const videoId = () => new URL(location.href).searchParams.get("v") || "";
+
+  // YouTube keeps several <video> elements around (ads, previews, hidden spares). Only the main one counts;
+  // acting on a spare one makes the real player stutter and the reported state flap.
+  function mainVideo() {
+    const all = [...document.querySelectorAll("video")];
+    const tagged = all.find((v) => v.classList.contains("html5-main-video"));
+    if (tagged) return tagged;
+    const area = (v) => { const r = v.getBoundingClientRect(); return r.width * r.height; };
+    return all.sort((x, y) => area(y) - area(x))[0] || null;
+  }
   const isAd = () =>
     !!document.querySelector(".ad-showing, .ad-interrupting, .ytp-ad-player-overlay, ytm-ad-slot-renderer");
 
@@ -125,7 +145,7 @@
 
   setInterval(() => {
     dismissConsent();
-    const v = document.querySelector("video");
+    const v = mainVideo();
     if (v) attach(v);
     kickStart();
     // Loaded but idle (e.g. after a stall): resume unless the host paused on purpose.
