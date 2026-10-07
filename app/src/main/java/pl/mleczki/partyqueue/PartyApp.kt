@@ -5,6 +5,9 @@ import android.util.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
 import org.mozilla.geckoview.GeckoPreferenceController
 import org.mozilla.geckoview.GeckoRuntime
 import org.mozilla.geckoview.GeckoRuntimeSettings
@@ -38,11 +41,15 @@ class PartyApp : Application() {
         applyGeckoPrefs()
         val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
         party = PartyController(getSharedPreferences("party", MODE_PRIVATE), YouTubeClient(), scope)
-        player = PlayerBridge(runtime).also {
+        player = PlayerBridge(this, runtime).also {
             it.party = party
             party.player = it
         }
         server = PartyServer(this, party).also { it.start() }
+        // Keep the spare player page loaded with the song that comes next.
+        scope.launch {
+            party.state.map { it.queue.firstOrNull()?.videoId }.distinctUntilChanged().collect { player.preload(it) }
+        }
         installExtensions()
     }
 

@@ -8,6 +8,10 @@ git tag `v<version>`.
 ## [Unreleased]
 
 ### Added
+- Song thumbnails in the queue, in proposals and in search results.
+- Song titles stay on one line; a long title slowly scrolls so it can be read in full.
+- Next song is loaded in advance in a second, silent player page, so a change of song is instant (about 0.05 s)
+  with the screen on or off. YouTube delays the start of videos for people who block ads by 5-13 s; this hides it.
 - Reorder the queue by holding a row and dragging it (it lifts, follows the finger, and the list scrolls at the
   edges so a song can be carried far); the ▲▼ buttons are gone from the host screen.
 - Queue gestures: swipe a row right to play it now (green), left to remove it (red); after a few seconds without
@@ -17,7 +21,13 @@ git tag `v<version>`.
   *Dodaj do kolejki* / *Jako następny* on videos. The sign-in button disappears once you are signed in.
 - Auto-generated YouTube Mixes can be imported from a video page (their songs are read from the page's "up next" list).
 
+### Fixed
+- The next song did not start (or started half a minute late) while the screen was off: the player page now has high
+  priority so Android no longer slows or kills it, songs are loaded inside the running page instead of reloading it,
+  and the next song is prepared in advance (see Added).
+
 ### Changed
+- A song that does not start within 45 s (was 30 s) is skipped.
 - "Wczytaj playlistę" is now called *Ustaw jako aktualną playlistę*; the "home" button is gone.
 
 ## [0.1.0] - 2026-10-07

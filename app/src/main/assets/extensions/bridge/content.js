@@ -1,11 +1,13 @@
 // Runs inside youtube.com pages in two roles, decided by the "pq" URL parameter that the app adds:
-//   player: the page that plays the queue; reports state, obeys commands, starts videos by itself.
+//   player: a page that plays (or is getting ready to play) songs of the queue. The app keeps two of them,
+//           slot "a" and slot "b"; the one that is not playing ("standby") already holds the next song, paused.
 //   browse: the page the host uses to look around; it stays quiet and can hand over a playlist's data.
 (function () {
   const port = browser.runtime.connect({ name: "yt" });
   const params = new URL(location.href).searchParams;
   const mode = params.has("pq") ? "player" : "browse";
-  const send = (m) => port.postMessage(Object.assign({ mode }, m));
+  const slot = params.get("pq") || "a";
+  const send = (m) => port.postMessage(Object.assign({ mode, slot }, m));
   const log = (m) => send({ type: "log", msg: String(m) });
 
   // Chrome clean-up. The player pane is small, so its logo (which overlaps the search icon) and the
@@ -87,6 +89,11 @@
   let video = null;
   let lastTick = 0;
   let hostPaused = false;
+  // A standby page loads its song and then waits, silent and paused, until the app activates it.
+  let standby = params.has("standby");
+  let announced = "";
+  // After an in-place load the element still holds the old song's data until the new load starts.
+  let freshLoadPending = false;
 
   const videoId = () => new URL(location.href).searchParams.get("v") || "";
 
@@ -103,7 +110,7 @@
     !!document.querySelector(".ad-showing, .ad-interrupting, .ytp-ad-player-overlay, ytm-ad-slot-renderer");
 
   function report(state) {
-    if (!video) return;
+    if (!video || standby) return;
     send({
       type: "state",
       state,
@@ -112,6 +119,15 @@
       dur: Math.round((isFinite(video.duration) ? video.duration : 0) * 1000),
       ad: isAd(),
     });
+  }
+
+  /** Standby pages tell the app once their song can start instantly. */
+  function announceReady() {
+    const id = videoId();
+    if (!standby || !video || freshLoadPending || video.readyState < 3 || announced === id || isAd()) return;
+    announced = id;
+    video.pause();
+    send({ type: "standbyReady", videoId: id });
   }
 
   const events = {
@@ -125,9 +141,15 @@
   function attach(v) {
     if (v === video) return;
     video = v;
+    if (standby) v.muted = true;
     for (const [ev, state] of Object.entries(events)) {
-      v.addEventListener(ev, () => report(state));
+      v.addEventListener(ev, () => {
+        if (standby && ev === "playing") { announceReady(); if (!announced) return; v.pause(); return; }
+        report(state);
+      });
     }
+    v.addEventListener("loadstart", () => { freshLoadPending = false; });
+    v.addEventListener("canplay", announceReady);
     v.addEventListener("timeupdate", () => {
       const now = Date.now();
       if (now - lastTick > 1000) {
@@ -135,42 +157,99 @@
         report(v.paused ? "paused" : "playing");
       }
     });
-    v.addEventListener("error", () => send({ type: "error", videoId: videoId() }));
+    v.addEventListener("error", () => { if (!standby) send({ type: "error", videoId: videoId() }); });
     // YouTube's own "up next" must never take over; the app drives the queue.
     v.loop = false;
-    log("video attached paused=" + v.paused + " ready=" + v.readyState);
+    log("video attached paused=" + v.paused + " ready=" + v.readyState + (standby ? " (standby)" : ""));
   }
 
-  // The mobile site loads nothing until its big play button is pressed; do that for it.
+  // The mobile site loads nothing until its big play button is pressed; do that for it, politely: at most one
+  // press a second (earlier presses hit a page that is not ready), until the video has data.
   let startTries = 0;
   let startedFor = "";
+  let lastPress = 0;
   function kickStart() {
     if (!video || video.readyState !== 0 || video.ended) return;
     const id = videoId();
     if (id !== startedFor) { startedFor = id; startTries = 0; }
-    if (startTries >= 6) return;
+    if (startTries >= 40 || Date.now() - lastPress < 1000) return;
     const btn = document.querySelector(".ytp-large-play-button, .player-controls-play-pause-icon button");
     if (btn && !isAd()) {
       startTries++;
+      lastPress = Date.now();
       log("kickstart click #" + startTries);
       btn.click();
     }
   }
 
-  setInterval(() => {
+  function tick() {
     dismissConsent();
     const v = mainVideo();
     if (v) attach(v);
     kickStart();
+  }
+
+  // Timers can be slowed down when the screen is off, DOM notifications are not: start on both.
+  new MutationObserver(() => { if (video === null || video.readyState === 0) tick(); })
+    .observe(document, { childList: true, subtree: true });
+
+  setInterval(() => {
+    tick();
+    if (!video) return;
+    if (standby) {
+      // Stay silent and still, whatever the page tries.
+      if (!video.muted) video.muted = true;
+      if (video.readyState >= 3) announceReady();
+      if (!video.paused && announced === videoId()) video.pause();
+      return;
+    }
     // Loaded but idle (e.g. after a stall): resume unless the host paused on purpose.
-    if (video && video.readyState > 0 && video.paused && !video.ended && !hostPaused) {
+    if (video.readyState > 0 && video.paused && !video.ended && !hostPaused) {
       video.play().catch(() => {});
     }
   }, 1000);
 
+  // Switching songs inside the page that is already running avoids reloading YouTube's player.
+  function loadInPlace(id, asStandby) {
+    try {
+      const el = document.querySelector(".html5-video-player");
+      const api = el && el.wrappedJSObject;
+      if (!api || typeof api.loadVideoById !== "function") throw new Error("no player api");
+      standby = !!asStandby;
+      hostPaused = standby;
+      announced = "";
+      freshLoadPending = true;
+      if (video) video.muted = standby;
+      api.loadVideoById(id);
+      history.replaceState(null, "", "/watch?v=" + id + "&pq=" + slot + (standby ? "&standby=1" : ""));
+      startedFor = id;
+      startTries = 0;
+      send({ type: "loadAck", videoId: id, ok: true });
+    } catch (e) {
+      log("in-place load failed: " + e);
+      send({ type: "loadAck", videoId: id, ok: false });
+    }
+  }
+
   port.onMessage.addListener((cmd) => {
-    if (!video || (cmd.target && cmd.target !== "player")) return;
+    if (cmd.slot && cmd.slot !== slot) return;
+    if (cmd.cmd === "loadVideo") { loadInPlace(cmd.id, cmd.standby); return; }
+    if (!video) return;
     switch (cmd.cmd) {
+      case "activate": // the app switches to this page: the prepared song starts now
+        standby = false;
+        hostPaused = false;
+        video.muted = false;
+        video.currentTime = 0;
+        video.play().catch(() => {});
+        break;
+      case "deactivate": // the song of this page is over; it becomes the spare
+        standby = true;
+        hostPaused = true;
+        announced = "";
+        video.pause();
+        video.muted = true;
+        break;
       case "play": hostPaused = false; video.play().catch(() => {}); break;
       case "pause": hostPaused = true; video.pause(); break;
       case "seek": video.currentTime = (cmd.arg || 0) / 1000; break;

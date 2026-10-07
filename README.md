@@ -57,6 +57,8 @@ must be bumped whenever its scripts change, otherwise GeckoView keeps the old co
 ## Things worth knowing
 
 - `PartyApp.onCreate` also runs inside every Gecko child process; only the main process may create the runtime.
+- Two hidden player pages take turns: while one plays, the other already holds the next song (paused, muted), so a change of
+  song is instant. YouTube makes people who block ads wait 5-13 s for a video to start; this hides that wait.
 - Autoplay is allowed through the session `PermissionDelegate` (Gecko prefs alone were not enough).
 - The mobile YouTube site loads nothing until its play button is pressed; the bridge presses it.
 - The bridge rejects the YouTube cookie banner ("reject all") automatically.

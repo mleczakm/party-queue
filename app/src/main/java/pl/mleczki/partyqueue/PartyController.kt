@@ -415,6 +415,7 @@ class PartyController(
         const val HOST_ID = "host"
         private const val MAX_PENDING_PER_GUEST = 5
         private const val HISTORY_MAX = 50
-        private const val LOAD_TIMEOUT_MS = 30_000L
+        // Generous: with the screen off a page can take a while to start, and skipping a song that is about to play is worse.
+        private const val LOAD_TIMEOUT_MS = 45_000L
     }
 }

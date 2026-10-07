@@ -31,7 +31,16 @@ import androidx.compose.ui.unit.IntOffset
 import kotlinx.coroutines.delay
 import kotlin.math.abs
 import kotlin.math.roundToInt
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
+import coil3.compose.AsyncImage
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.MarqueeSpacing
+import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
@@ -111,6 +120,7 @@ fun HostApp(app: PartyApp, initialTab: Int = 0) {
     val notice by remember { derivedStateOf { state.value.notice } }
     val proposalCount by remember { derivedStateOf { state.value.proposals.size } }
     val requestCount by remember { derivedStateOf { state.value.guests.count { it.hostRequested } } }
+    val visible by app.player.visibleSession.collectAsStateWithLifecycle()
     var expanded by rememberSaveable { mutableStateOf(false) }
     var tab by rememberSaveable { mutableIntStateOf(initialTab) }
 
@@ -125,7 +135,9 @@ fun HostApp(app: PartyApp, initialTab: Int = 0) {
             ) {
                 AndroidView(
                     modifier = Modifier.fillMaxSize(),
-                    factory = { ctx -> GeckoView(ctx).also { it.setSession(app.player.session); app.player.onViewAttached() } },
+                    factory = { ctx -> GeckoView(ctx).also { it.setSession(visible); app.player.onViewAttached() } },
+                    // The two player pages take turns; show whichever one is playing.
+                    update = { view -> if (view.session !== visible) { view.releaseSession(); view.setSession(visible) } },
                     onRelease = { it.releaseSession() },
                 )
             }
@@ -226,11 +238,43 @@ private fun NowPlaying(state: State<Snapshot>, party: PartyController, expanded:
 }
 
 @Composable
-private fun TrackRow(title: String, subtitle: String, actions: @Composable RowScope.() -> Unit) {
+private fun Thumb(videoId: String) {
+    AsyncImage(
+        model = "https://i.ytimg.com/vi/$videoId/mqdefault.jpg",
+        contentDescription = null,
+        contentScale = ContentScale.Crop,
+        modifier = Modifier
+            .size(width = 64.dp, height = 36.dp)
+            .clip(RoundedCornerShape(6.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant),
+    )
+}
+
+/** A song row. The title stays on one line and, when it is too long, slowly scrolls so it can be read in full. */
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun TrackRow(title: String, subtitle: String, videoId: String? = null, actions: @Composable RowScope.() -> Unit) {
     Column {
-        Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+        Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+            if (videoId != null) {
+                Thumb(videoId)
+                Spacer(Modifier.width(10.dp))
+            }
             Column(Modifier.weight(1f)) {
-                Text(title, maxLines = 2, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodyMedium)
+                Text(
+                    title,
+                    maxLines = 1,
+                    softWrap = false,
+                    overflow = TextOverflow.Clip,
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.basicMarquee(
+                        iterations = Int.MAX_VALUE,
+                        initialDelayMillis = 1_500,
+                        repeatDelayMillis = 2_000,
+                        spacing = MarqueeSpacing(40.dp),
+                        velocity = 28.dp,
+                    ),
+                )
                 Text(subtitle, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             actions()
@@ -436,7 +480,7 @@ private fun QueueTab(state: State<Snapshot>, party: PartyController) {
                         )
                     },
                 ) {
-                    TrackRow(t.title, sub) {}
+                    TrackRow(t.title, sub, t.videoId) {}
                 }
             }
         }
@@ -461,7 +505,7 @@ private fun ProposalsTab(state: State<Snapshot>, party: PartyController) {
     }
     LazyColumn(Modifier.fillMaxSize()) {
         items(proposals, key = { it.id }) { p ->
-            TrackRow(p.meta.title, "${p.byName} · ${p.meta.channel}") {
+            TrackRow(p.meta.title, "${p.byName} · ${p.meta.channel}", p.meta.videoId) {
                 Mini("Odrzuć") { party.reject(p.id) }
                 Button(onClick = { party.approve(p.id) }, contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp)) { Text("Zatwierdź") }
             }
@@ -590,7 +634,7 @@ private fun AddTab(state: State<Snapshot>, party: PartyController) {
             error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
         }
         items(results, key = { it.videoId }) { m ->
-            TrackRow(m.title, listOfNotNull(m.channel.ifBlank { null }, m.duration).joinToString(" · ")) {
+            TrackRow(m.title, listOfNotNull(m.channel.ifBlank { null }, m.duration).joinToString(" · "), m.videoId) {
                 Mini("Następna") { party.enqueue(m, "Host", Source.HOST, playNext = true) }
                 Mini("Dodaj") { party.enqueue(m, "Host", Source.HOST) }
             }

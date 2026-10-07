@@ -10,6 +10,7 @@ distributed under AGPL-3.0 as well.
 | [uBlock Origin](https://github.com/gorhill/uBlock) 1.75.0 | Ad blocking, bundled as a built-in add-on | GPL-3.0 |
 | [Play YouTube Video In Background](https://github.com/LabinatorSolutions/play-youtube-video-in-background) 1.1.0 | Keeps playback going with the screen off | AGPL-3.0 |
 | [Ktor](https://ktor.io/) (CIO server, WebSockets) | Local guest server | Apache-2.0 |
+| [Coil](https://coil-kt.github.io/coil/) and OkHttp | Song thumbnails in the host UI | Apache-2.0 |
 | [ZXing](https://github.com/zxing/zxing) | QR code generation | Apache-2.0 |
 | [Jetpack Compose / AndroidX](https://developer.android.com/jetpack) | Host UI | Apache-2.0 |
 | [Kotlin and kotlinx.coroutines](https://kotlinlang.org/) | Language and runtime | Apache-2.0 |

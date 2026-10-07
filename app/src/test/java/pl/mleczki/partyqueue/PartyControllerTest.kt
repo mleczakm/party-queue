@@ -264,7 +264,7 @@ class PartyControllerTest {
     fun `a track that never starts is skipped with a notice`() = runTest {
         val r = rig((1..2).map(::meta))
         r.party.loadPlaylist("any", false)
-        advanceTimeBy(31_000); runCurrent()
+        advanceTimeBy(46_000); runCurrent()
         assertEquals(meta(2).videoId, r.state().current?.videoId)
         assertNotNull(r.state().notice)
     }

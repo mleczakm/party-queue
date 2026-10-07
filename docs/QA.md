@@ -43,11 +43,22 @@ Use a real phone, not an emulator. Note the phone model and Android version in t
 - [ ] A video that cannot be embedded or is removed is skipped with a notice within ~30 s.
 - [ ] After a fresh install the cookie banner disappears by itself and is not shown again.
 
+**Song changes**
+- [ ] With the screen **on** and with it **off**, the next song starts at once (no gap of seconds) when a song ends,
+  when *Następny* is pressed, and when a song is swiped to play now.
+- [ ] Lock the screen and let at least three songs change; the music never stops.
+- [ ] Only one song is audible at any time (the spare page is silent). In `adb logcat -s PartyQueue`, `STARTUP` lines after
+  a `swap` show a few tens of milliseconds.
+- [ ] Changing the head of the queue (move, remove, play now, clear) never makes the wrong song play.
+
 **Screen off and background**
 - [ ] Lock the screen with music playing: sound continues for at least 10 minutes.
 - [ ] A guest phone can still propose a song and see the queue while the host screen is off.
 - [ ] Press BACK on the host: the app hides, music keeps playing; reopening shows the video, not a blank pane.
 - [ ] Swipe the app away from recents: the notification and playback survive or stop cleanly (note which).
+
+**Queue list**
+- [ ] Every row shows a thumbnail; titles stay on one line, and a title longer than the row scrolls slowly.
 
 **Queue gestures**
 - [ ] Hold a row for ~half a second: the phone vibrates, the row lifts and follows the finger; neighbours step aside; releasing keeps the new place.
