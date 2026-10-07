@@ -19,6 +19,9 @@ interface MetaSource {
     suspend fun search(query: String): List<Meta>
     suspend fun playlist(urlOrId: String): Pair<String, List<Meta>>
     suspend fun meta(videoId: String): Meta
+
+    /** The songs of a Mix (or any list opened from a video) as listed in that video's "up next" panel. */
+    suspend fun watchPlaylist(videoId: String, listId: String): Pair<String, List<Meta>>
 }
 
 class YouTubeClient : MetaSource {
@@ -51,6 +54,14 @@ class YouTubeClient : MetaSource {
             ?: Regex("<title>(.*?)</title>").find(html)?.groupValues?.get(1)?.removeSuffix(" - YouTube")
             ?: "Playlista"
         title to videos
+    }
+
+    override suspend fun watchPlaylist(videoId: String, listId: String): Pair<String, List<Meta>> = withContext(Dispatchers.IO) {
+        val data = YouTubeParser.initialData(http("https://www.youtube.com/watch?v=$videoId&list=$listId&start_radio=1"))
+        val videos = YouTubeParser.extractPlaylistPanel(data)
+        if (videos.isEmpty()) throw IllegalStateException("Ten mix nie jest dostępny bez logowania")
+        videos.forEach(::remember)
+        (YouTubeParser.playlistTitle(data) ?: "Mix: ${videos.first().title}") to videos
     }
 
     override suspend fun meta(videoId: String): Meta {

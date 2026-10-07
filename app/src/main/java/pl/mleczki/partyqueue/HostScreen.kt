@@ -556,8 +556,14 @@ private fun BrowseTab(app: PartyApp, party: PartyController) {
     fun setPlaylist(id: String) = work {
         if (isMix) {
             // A Mix exists only on a watch page: read the "up next" list from the page that is showing.
-            if ("/watch" !in url) throw PartyException("Otwórz dowolny film z tego miksu, a potem ustaw go jako playlistę")
-            party.importPlaylistData(url, bridge.scrapePlaylist(url), shuffle)
+            val fromVideo = YouTubeClient.parseVideoId(url).takeIf { "/watch" in url }
+                ?: throw PartyException("Otwórz dowolny film z tego miksu, a potem ustaw go jako playlistę")
+            try {
+                party.loadWatchPlaylist(fromVideo, id, shuffle)
+            } catch (e: Exception) {
+                // Personal mixes (e.g. "Mój mix") need the signed-in page.
+                party.importPlaylistData(url, bridge.scrapePlaylist(url), shuffle)
+            }
         } else {
             val page = "https://m.youtube.com/playlist?list=$id"
             try {

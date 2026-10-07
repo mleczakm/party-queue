@@ -18,8 +18,8 @@ import org.junit.Test
 @OptIn(ExperimentalCoroutinesApi::class)
 class PartyControllerTest {
 
-    private class Rig(scope: CoroutineScope, val prefs: FakePrefs = FakePrefs(), playlist: List<Meta> = emptyList()) {
-        val source = FakeSource(playlist).also { s -> playlist.forEach { s.add(it) } }
+    private class Rig(scope: CoroutineScope, val prefs: FakePrefs = FakePrefs(), playlist: List<Meta> = emptyList(), mix: List<Meta> = emptyList()) {
+        val source = FakeSource(playlist, mix).also { s -> playlist.forEach { s.add(it) } }
         val player = FakePlayer()
         val party = PartyController(prefs, source, scope).also { it.player = player }
         val secret get() = party.state.value.joinSecret
@@ -27,7 +27,7 @@ class PartyControllerTest {
         fun state() = party.state.value
     }
 
-    private fun TestScope.rig(playlist: List<Meta> = emptyList(), prefs: FakePrefs = FakePrefs()) = Rig(backgroundScope, prefs, playlist)
+    private fun TestScope.rig(playlist: List<Meta> = emptyList(), prefs: FakePrefs = FakePrefs(), mix: List<Meta> = emptyList()) = Rig(backgroundScope, prefs, playlist, mix)
 
     private fun msg(type: String, vid: String, state: String = "", ad: Boolean = false, pos: Long = 0, dur: Long = 1000) =
         JSONObject().put("type", type).put("videoId", vid).put("state", state).put("ad", ad).put("pos", pos).put("dur", dur)
@@ -296,6 +296,22 @@ class PartyControllerTest {
         assertTrue(r.state().queue.isEmpty())
         assertNull(r.state().playlistTitle)
         r.party.next() // nothing queued and nothing to repeat
+        assertNull(r.state().current)
+    }
+
+    @Test
+    fun `a public mix is loaded from its video without a browser`() = runTest {
+        val r = rig(mix = (1..3).map(::meta))
+        r.party.loadWatchPlaylist("dQw4w9WgXcQ", "RDdQw4w9WgXcQ", false)
+        assertEquals(meta(1).videoId, r.state().current?.videoId)
+        assertEquals(listOf(2, 3).map { meta(it).videoId }, r.state().queue.map { it.videoId })
+        assertEquals("Mix", r.state().playlistTitle)
+    }
+
+    @Test
+    fun `a mix that needs sign-in is reported so the caller can read the page instead`() = runTest {
+        val r = rig()
+        try { r.party.loadWatchPlaylist("dQw4w9WgXcQ", "RDMM", false); fail() } catch (e: IllegalStateException) { /* expected */ }
         assertNull(r.state().current)
     }
 

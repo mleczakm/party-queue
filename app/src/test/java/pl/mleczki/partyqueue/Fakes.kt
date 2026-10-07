@@ -44,13 +44,17 @@ class FakePlayer : PlayerPort {
 }
 
 /** Serves canned metadata; ids are "v" + 10 characters so they pass validation. */
-class FakeSource(private val playlist: List<Meta> = emptyList()) : MetaSource {
+class FakeSource(private val playlist: List<Meta> = emptyList(), private val mix: List<Meta> = emptyList()) : MetaSource {
     val known = HashMap<String, Meta>()
 
     fun add(m: Meta): Meta = m.also { known[it.videoId] = it }
 
     override suspend fun search(query: String): List<Meta> = known.values.filter { query.lowercase() in it.title.lowercase() }
     override suspend fun playlist(urlOrId: String): Pair<String, List<Meta>> = "Test playlist" to playlist
+    override suspend fun watchPlaylist(videoId: String, listId: String): Pair<String, List<Meta>> {
+        if (mix.isEmpty()) throw IllegalStateException("Ten mix nie jest dostępny bez logowania")
+        return "Mix" to mix
+    }
     override suspend fun meta(videoId: String): Meta =
         known[videoId] ?: throw IllegalArgumentException("Nie znaleziono filmu")
 }

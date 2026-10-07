@@ -220,6 +220,11 @@ class PartyController(
         applyPlaylist(title, videos, url, shuffleIt)
     }
 
+    suspend fun loadWatchPlaylist(videoId: String, listId: String, shuffleIt: Boolean) {
+        val (title, videos) = yt.watchPlaylist(videoId, listId)
+        applyPlaylist(title, videos, "https://m.youtube.com/watch?v=$videoId&list=$listId", shuffleIt)
+    }
+
     /** Import from a playlist page the host's own browser loaded (also works for private lists after signing in). */
     fun importPlaylistData(url: String, data: String, shuffleIt: Boolean) {
         val json = try { JSONObject(data) } catch (e: Exception) { throw PartyException("Nie udało się odczytać playlisty ze strony") }

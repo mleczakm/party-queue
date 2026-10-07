@@ -1,7 +1,7 @@
 {
   "manifest_version": 2,
   "name": "Party Queue bridge",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "Reports YouTube player state to the Party Queue app and accepts playback commands.",
   "browser_specific_settings": {
     "gecko": { "id": "bridge@partyqueue.mleczki.pl" }
