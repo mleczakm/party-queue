@@ -22,8 +22,7 @@ class PartyControllerTest {
         val source = FakeSource(playlist, mix).also { s -> playlist.forEach { s.add(it) } }
         val player = FakePlayer()
         val party = PartyController(prefs, source, scope).also { it.player = player }
-        val secret get() = party.state.value.joinSecret
-        fun guest(name: String = "Ola"): Guest = party.join(name, secret)
+        fun guest(name: String = "Ola"): Guest = party.join(name)
         fun state() = party.state.value
     }
 
@@ -35,32 +34,21 @@ class PartyControllerTest {
     // ------------------------------------------------------------ joining
 
     @Test
-    fun `joining needs the current secret and an open party`() = runTest {
+    fun `anyone can join while the party is open and nobody once it is closed`() = runTest {
         val r = rig()
-        try { r.party.join("Ola", "wrong"); fail() } catch (e: PartyException) { /* expected */ }
+        assertEquals("Ola", r.party.join("Ola").name)
         r.party.setJoinOpen(false)
-        try { r.party.join("Ola", r.secret); fail() } catch (e: PartyException) { /* expected */ }
+        try { r.party.join("Late"); fail() } catch (e: PartyException) { /* expected */ }
         r.party.setJoinOpen(true)
-        assertEquals("Ola", r.party.join("Ola", r.secret).name)
+        assertEquals("Late", r.party.join("Late").name)
     }
 
     @Test
     fun `names are trimmed, limited and must not be blank`() = runTest {
         val r = rig()
-        assertEquals("A B", r.party.join("  A    B  ", r.secret).name)
-        assertEquals(24, r.party.join("x".repeat(80), r.secret).name.length)
-        try { r.party.join("   ", r.secret); fail() } catch (e: PartyException) { /* expected */ }
-    }
-
-    @Test
-    fun `rotating the secret invalidates the old code but keeps guests`() = runTest {
-        val r = rig()
-        val g = r.guest()
-        val old = r.secret
-        r.party.rotateSecret()
-        assertFalse(old == r.secret)
-        try { r.party.join("Late", old); fail() } catch (e: PartyException) { /* expected */ }
-        assertNotNull(r.party.guestByToken(g.token))
+        assertEquals("A B", r.party.join("  A    B  ").name)
+        assertEquals(24, r.party.join("x".repeat(80)).name.length)
+        try { r.party.join("   "); fail() } catch (e: PartyException) { /* expected */ }
     }
 
     // ------------------------------------------------------------ roles
@@ -214,6 +202,23 @@ class PartyControllerTest {
         assertEquals(meta(5).videoId, r.state().current?.videoId)
         assertEquals(listOf(4, 2).map { meta(it).videoId }, r.state().queue.map { it.videoId })
         assertEquals(meta(1).videoId, r.state().history.first().videoId)
+    }
+
+    @Test
+    fun `moving a song to the front puts it first and keeps it ahead of later approvals`() = runTest {
+        val r = rig((1..4).map(::meta))
+        r.party.loadPlaylist("any", false) // playing 1, queue 2,3,4
+        val uid4 = r.state().queue.first { it.videoId == meta(4).videoId }.uid
+        r.party.moveToFront(uid4)
+        assertEquals(listOf(4, 2, 3).map { meta(it).videoId }, r.state().queue.map { it.videoId })
+        r.source.add(meta(9))
+        val g = r.guest()
+        r.party.propose(meta(9).videoId, g)
+        r.party.approve(r.state().proposals.single().id)
+        // the approved song queues behind the moved one, ahead of the rest of the playlist
+        assertEquals(listOf(4, 9, 2, 3).map { meta(it).videoId }, r.state().queue.map { it.videoId })
+        r.party.moveToFront("nope") // unknown ids change nothing
+        assertEquals(4, r.state().queue.size)
     }
 
     @Test
@@ -387,13 +392,12 @@ class PartyControllerTest {
         val json = r.party.jsonFor(g.id)
         assertFalse(json.contains(g.token))
         assertFalse(json.contains(r.party.hostGuest.token))
-        assertFalse(json.contains(r.secret))
     }
 
     // ------------------------------------------------------------ persistence
 
     @Test
-    fun `guests, secret and the queue survive a restart`() = runTest {
+    fun `guests and the queue survive a restart`() = runTest {
         val prefs = FakePrefs()
         val first = rig((1..3).map(::meta), prefs)
         val g = first.guest()
@@ -402,7 +406,6 @@ class PartyControllerTest {
         advanceTimeBy(1_000); runCurrent()
 
         val second = rig(emptyList(), prefs)
-        assertEquals(first.secret, second.secret)
         assertEquals(Role.HOST, second.party.guestByToken(g.token)!!.role)
         assertEquals(first.party.hostGuest.token, second.party.hostGuest.token)
         // The song that was playing comes back first, paused: the host presses play.

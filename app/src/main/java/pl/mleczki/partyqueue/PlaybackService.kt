@@ -39,7 +39,7 @@ class PlaybackService : Service() {
             PendingIntent.FLAG_IMMUTABLE
         )
         val notification = Notification.Builder(this, CHANNEL)
-            .setSmallIcon(android.R.drawable.ic_media_play)
+            .setSmallIcon(R.drawable.ic_stat_party)
             .setContentTitle("Party Queue")
             .setContentText("Odtwarzanie działa w tle")
             .setContentIntent(open)
@@ -51,7 +51,7 @@ class PlaybackService : Service() {
             scope.launch {
                 app.party.state.map { it.current?.title }.distinctUntilChanged().collect { title ->
                     val n = Notification.Builder(this@PlaybackService, CHANNEL)
-                        .setSmallIcon(android.R.drawable.ic_media_play)
+                        .setSmallIcon(R.drawable.ic_stat_party)
                         .setContentTitle(title ?: "Party Queue")
                         .setContentText(if (title != null) "Odtwarzanie działa w tle" else "Kolejka czeka na utwory")
                         .setContentIntent(open)

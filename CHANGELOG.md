@@ -8,6 +8,14 @@ git tag `v<version>`.
 ## [Unreleased]
 
 ### Added
+- New look: light and dark colour themes (header button: auto / light / dark), party style with gradients, a
+  slowly flowing now-playing card, animated equalizer, sliding tab indicator and transitions.
+- Branding: new app icon (adaptive, with a monochrome variant), notification icon, splash colour, `branding/` assets.
+- A short tap on a song moves it to the top of the queue.
+- Guest page rewritten: works on phones and big screens (two columns), light/dark theme, icons, a connection banner,
+  keyboard shortcuts for hosts (Space, N, P, arrows, Enter, T, Delete, Alt+arrows, R, /, 1-5, D, ?), mouse drag-and-drop
+  reordering, double-click to play, tooltips; `POST /api/queue/{uid}/move` and `/api/player/repeat`.
+- *Wklej link* in the YouTube tab; *Udostępnij link* / *Kopiuj* in the *Zaproś* tab.
 - Song thumbnails in the queue, in proposals and in search results.
 - Song titles stay on one line; a long title slowly scrolls so it can be read in full.
 - Next song is loaded in advance in a second, silent player page, so a change of song is instant (about 0.05 s)
@@ -22,11 +30,17 @@ git tag `v<version>`.
 - Auto-generated YouTube Mixes can be imported from a video page (their songs are read from the page's "up next" list).
 
 ### Fixed
+- The guest page did not work (it needed a one-time code from the QR link).
 - The next song did not start (or started half a minute late) while the screen was off: the player page now has high
   priority so Android no longer slows or kills it, songs are loaded inside the running page instead of reloading it,
   and the next song is prepared in advance (see Added).
 
 ### Changed
+- The *Dołącz* tab is now *Zaproś*; the *Dodaj* tab is gone (its functions moved to the queue header and the YouTube tab).
+- Joining needs no code: whoever opens the page and gives a name is a guest. The QR code simply opens the page and has a
+  proper white border; *Nowy kod QR* is gone.
+- Playlists keep YouTube's order by default (shuffle is off unless switched on).
+- The hint that shows swiping appears rarely (after ~45 s of idleness, at most every 3 minutes) and only on the first row.
 - A song that does not start within 45 s (was 30 s) is skipped.
 - "Wczytaj playlistę" is now called *Ustaw jako aktualną playlistę*; the "home" button is gone.
 

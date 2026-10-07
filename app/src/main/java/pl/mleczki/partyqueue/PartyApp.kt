@@ -5,6 +5,9 @@ import android.util.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
@@ -24,6 +27,16 @@ class PartyApp : Application() {
     lateinit var server: PartyServer
         private set
 
+    private val _themeMode = MutableStateFlow(ThemeMode.AUTO)
+    val themeMode: StateFlow<ThemeMode> = _themeMode.asStateFlow()
+
+    /** Auto → light → dark → auto; remembered between runs. */
+    fun cycleTheme() {
+        val next = _themeMode.value.next()
+        _themeMode.value = next
+        getSharedPreferences("ui", MODE_PRIVATE).edit().putString("theme", next.name).apply()
+    }
+
     fun isPartyReady() = ::party.isInitialized
 
     override fun onCreate() {
@@ -39,6 +52,9 @@ class PartyApp : Application() {
             GeckoRuntimeSettings.Builder().arguments(arrayOf("-profile", profile.absolutePath)).build()
         )
         applyGeckoPrefs()
+        _themeMode.value = runCatching {
+            ThemeMode.valueOf(getSharedPreferences("ui", MODE_PRIVATE).getString("theme", null) ?: "AUTO")
+        }.getOrDefault(ThemeMode.AUTO)
         val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
         party = PartyController(getSharedPreferences("party", MODE_PRIVATE), YouTubeClient(), scope)
         player = PlayerBridge(this, runtime).also {

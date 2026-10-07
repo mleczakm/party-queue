@@ -58,7 +58,6 @@ data class Snapshot(
     val online: Set<String> = emptySet(),
     val player: PlayerInfo = PlayerInfo(),
     val joinOpen: Boolean = true,
-    val joinSecret: String = "",
     val playlistTitle: String? = null,
     val playlistUrl: String = "",
     val repeat: Boolean = true,

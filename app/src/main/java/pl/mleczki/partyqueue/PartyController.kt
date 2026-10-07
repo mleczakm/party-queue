@@ -57,7 +57,6 @@ class PartyController(
         _state = MutableStateFlow(
             Snapshot(
                 guests = guests,
-                joinSecret = saved?.optString("secret").orEmpty().ifEmpty { randomToken(8) },
                 joinOpen = saved?.optBoolean("joinOpen", true) ?: true,
                 repeat = saved?.optBoolean("repeat", true) ?: true,
                 playlistUrl = saved?.optString("playlistUrl").orEmpty(),
@@ -105,10 +104,10 @@ class PartyController(
     fun guestById(id: String): Guest? =
         if (id == HOST_ID) hostGuest else _state.value.guests.firstOrNull { it.id == id }
 
-    fun join(name: String, secret: String): Guest {
+    /** Anyone who reaches the page and gives a name is a guest; the host can close the door with [setJoinOpen]. */
+    fun join(name: String): Guest {
         val s = _state.value
         if (!s.joinOpen) throw PartyException("Dołączanie jest zamknięte")
-        if (secret != s.joinSecret) throw PartyException("Ten kod QR jest nieaktualny")
         val clean = name.trim().replace(Regex("\\s+"), " ").take(24)
         if (clean.isEmpty()) throw PartyException("Podaj imię")
         val g = Guest(randomToken(8), clean, Role.GUEST, randomToken(32))
@@ -139,11 +138,6 @@ class PartyController(
 
     fun setJoinOpen(open: Boolean) {
         _state.update { it.copy(joinOpen = open) }
-        persist()
-    }
-
-    fun rotateSecret() {
-        _state.update { it.copy(joinSecret = randomToken(8)) }
         persist()
     }
 
@@ -206,6 +200,15 @@ class PartyController(
             val t = q.removeAt(i)
             q.add(j, t)
             s.copy(queue = q)
+        }
+    }
+
+    /** Puts a song at the very top of the queue (it stays there even when more songs are approved). */
+    fun moveToFront(uid: String) {
+        _state.update { s ->
+            val t = s.queue.firstOrNull { it.uid == uid } ?: return@update s
+            // Marked as a priority song so songs approved later line up behind it instead of jumping ahead.
+            s.copy(queue = listOf(t.copy(priority = true)) + s.queue.filterNot { it.uid == uid })
         }
     }
 
@@ -401,7 +404,6 @@ class PartyController(
         val s = _state.value
         val o = JSONObject()
             .put("hostToken", hostGuest.token)
-            .put("secret", s.joinSecret)
             .put("joinOpen", s.joinOpen)
             .put("repeat", s.repeat)
             .put("playlistUrl", s.playlistUrl)

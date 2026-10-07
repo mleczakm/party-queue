@@ -80,7 +80,7 @@ fun Application.partyModule(party: PartyController, indexHtml: String) {
         post("/api/join") {
             try {
                 val body = JSONObject(call.receiveText().ifBlank { "{}" })
-                val g = party.join(body.optString("name"), body.optString("secret"))
+                val g = party.join(body.optString("name"))
                 respondJson(call, HttpStatusCode.OK, JSONObject().put("token", g.token).put("id", g.id))
             } catch (e: PartyException) {
                 respondJson(call, HttpStatusCode.Forbidden, JSONObject().put("error", e.message))
@@ -139,13 +139,15 @@ fun Application.partyModule(party: PartyController, indexHtml: String) {
         }
 
         post("/api/queue/{uid}/{action}") {
-            handle(party, call, hostOnly = true) { _, _ ->
+            handle(party, call, hostOnly = true) { _, body ->
                 val uid = call.parameters["uid"].orEmpty()
                 when (call.parameters["action"]) {
+                    "move" -> party.move(uid, body.optInt("delta"))
                     "remove" -> party.remove(uid)
                     "up" -> party.move(uid, -1)
                     "down" -> party.move(uid, 1)
                     "playnow" -> party.playNow(uid)
+                    "top" -> party.moveToFront(uid)
                     else -> throw PartyException("Nieznana akcja")
                 }
                 null
@@ -159,6 +161,7 @@ fun Application.partyModule(party: PartyController, indexHtml: String) {
                     "next" -> party.next()
                     "prev" -> party.previous()
                     "seek" -> party.seek(body.optLong("ms"))
+                    "repeat" -> party.setRepeat(body.optBoolean("on"))
                     else -> throw PartyException("Nieznana komenda")
                 }
                 null

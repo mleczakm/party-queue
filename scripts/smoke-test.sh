@@ -17,8 +17,7 @@ pass=0; fail=0
 
 prefs="$($adb shell "run-as $pkg cat shared_prefs/party.xml")"
 host="$(grep -oE 'hostToken&quot;:&quot;[a-z0-9]+' <<<"$prefs" | sed 's/.*;//')"
-secret="$(grep -oE 'secret&quot;:&quot;[a-z0-9]+' <<<"$prefs" | sed 's/.*;//')"
-if [ -z "$host" ] || [ -z "$secret" ]; then
+if [ -z "$host" ]; then
   echo "Could not read tokens: is the debug app installed and started?" >&2
   exit 2
 fi
@@ -35,11 +34,11 @@ check() { # description expected actual
 echo "Smoke test against $base"
 check "guest page is served" 200 "$(curl -s -o /dev/null -w '%{http_code}' "$base/")"
 check "api rejects missing token" 401 "$(curl -s -o /dev/null -w '%{http_code}' "$base/api/state")"
-check "join with wrong secret is refused" 403 "$(curl -s -o /dev/null -w '%{http_code}' -X POST "$base/api/join" -d '{"name":"x","secret":"wrong"}')"
+check "join without a name is refused" 403 "$(curl -s -o /dev/null -w '%{http_code}' -X POST "$base/api/join" -d '{"name":"  "}')"
 
-joined="$(curl -s -m 10 -X POST "$base/api/join" -d "{\"name\":\"Smoke\",\"secret\":\"$secret\"}")"
+joined="$(curl -s -m 10 -X POST "$base/api/join" -d '{"name":"Smoke"}')"
 guest="$(jq_ "d['token']" <<<"$joined")"; gid="$(jq_ "d['id']" <<<"$joined")"
-check "guest can join with the QR secret" GUEST "$(req GET /api/state "$guest" | jq_ "d['me']['role']")"
+check "anyone who opens the page can join" GUEST "$(req GET /api/state "$guest" | jq_ "d['me']['role']")"
 
 vid="$(req GET "/api/search?q=maanam%20boskie%20buenos" "$guest" | jq_ "d['results'][0]['vid']")"
 check "search returns a video id" 11 "${#vid}"

@@ -30,4 +30,4 @@ and the changelog, runs lint and tests, and publishes a GitHub release with the 
   change; GeckoView keeps the old copy otherwise.
 - `PartyApp.onCreate` runs in every Gecko child process. Create the runtime only in the main process.
 - Do not commit the third-party add-ons; edit `addons.lock` (URL and SHA-256) to update them.
-- Never log or commit the host token or join secret; they live only in the app's private storage.
+- Never log or commit the host token; it lives only in the app's private storage.

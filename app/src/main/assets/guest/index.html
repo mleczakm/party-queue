@@ -4,130 +4,278 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="dark light">
+<meta name="theme-color" content="#7c3aed">
 <title>Party Queue</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%23ff2e93'/%3E%3Cstop offset='.55' stop-color='%237c3aed'/%3E%3Cstop offset='1' stop-color='%2322b8ff'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='16' fill='url(%23g)'/%3E%3Crect x='14' y='30' width='8' height='20' rx='4' fill='%23fff'/%3E%3Crect x='28' y='16' width='8' height='34' rx='4' fill='%23fff'/%3E%3Crect x='42' y='24' width='8' height='26' rx='4' fill='%23fff'/%3E%3Ccircle cx='51' cy='13' r='4' fill='%23b8f34a'/%3E%3C/svg%3E">
 <style>
-  :root { --bg:#14151a; --card:#1e2028; --line:#2c2f3a; --text:#eceef4; --muted:#9aa0b4; --accent:#6c8cff; --danger:#ff6b6b; --ok:#4cc38a; }
-  @media (prefers-color-scheme: light) {
-    :root { --bg:#f4f5f9; --card:#fff; --line:#dfe2ec; --text:#14151a; --muted:#5d6376; --accent:#3d5afe; --danger:#d93a3a; --ok:#1f9d63; }
+  :root {
+    --pink:#ff2e93; --violet:#7c3aed; --blue:#22b8ff; --orange:#ff9f1c; --lime:#b8f34a;
+    --grad: linear-gradient(120deg, var(--pink), var(--violet) 55%, var(--blue));
+    --bg:#130a26; --bg2:#1b1033; --card:#241741; --card2:#2b1b4b; --line:#3a2a62; --text:#f3ecff; --muted:#bcaedb;
+    --accent:#c4a3ff; --accent-ink:#1b0b3a; --danger:#ff8a9b; --ok:#7ee0a3; --shadow:0 8px 28px #0006; --glass:#130a26cc;
   }
-  * { box-sizing: border-box; }
-  body { margin:0; background:var(--bg); color:var(--text); font:16px/1.4 system-ui, sans-serif;
-         padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom); }
-  main { max-width: 640px; margin: 0 auto; padding: 12px 14px 80px; }
-  h1 { font-size: 20px; margin: 8px 0 12px; }
-  h2 { font-size: 15px; color: var(--muted); font-weight: 600; margin: 18px 0 6px; text-transform: uppercase; letter-spacing: .04em; }
-  .card { background: var(--card); border:1px solid var(--line); border-radius: 12px; padding: 12px; }
-  .row { display:flex; align-items:center; gap:10px; }
-  .grow { flex:1; min-width:0; }
-  input[type=text] { width:100%; padding: 12px; border-radius: 10px; border:1px solid var(--line); background: var(--card); color: var(--text); font-size:16px; }
-  button { font: inherit; padding: 10px 14px; border-radius: 10px; border:1px solid var(--line); background: var(--card); color: var(--text); cursor:pointer; }
-  button.primary { background: var(--accent); border-color: var(--accent); color:#fff; }
-  button.danger { color: var(--danger); }
-  button.small { padding: 6px 10px; font-size: 14px; }
-  button:disabled { opacity:.5; }
-  .item { display:flex; align-items:center; gap:10px; padding:8px 0; border-bottom:1px solid var(--line); }
-  .item:last-child { border-bottom:none; }
-  .item img { width:64px; height:36px; object-fit:cover; border-radius:6px; background:var(--line); flex:none; }
-  .title { overflow:hidden; text-overflow:ellipsis; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; }
-  .sub { color: var(--muted); font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  .tabs { display:flex; gap:6px; margin: 14px 0 6px; overflow-x:auto; }
-  .tabs button { white-space:nowrap; }
-  .tabs button.on { background: var(--accent); border-color: var(--accent); color:#fff; }
-  .badge { display:inline-block; min-width:18px; padding:0 6px; border-radius:9px; background:var(--danger); color:#fff; font-size:12px; margin-left:6px; }
-  .pill { font-size:12px; padding:2px 8px; border-radius:10px; border:1px solid var(--line); color:var(--muted); }
-  .pill.host { color: var(--ok); border-color: var(--ok); }
-  #toast { position:fixed; left:50%; bottom: calc(16px + env(safe-area-inset-bottom)); transform:translateX(-50%); background:#000d; color:#fff; padding:10px 16px; border-radius:10px; max-width:90%; z-index:9; display:none; }
-  .bar { height:4px; background:var(--line); border-radius:2px; margin-top:8px; overflow:hidden; }
-  .bar > div { height:100%; background: var(--accent); width:0; transition: width .9s linear; }
-  .ctl { display:flex; gap:8px; margin-top:10px; }
-  .muted { color: var(--muted); }
-  .hidden { display:none !important; }
+  :root[data-theme=light] {
+    --bg:#fff7fc; --bg2:#fbf2ff; --card:#ffffff; --card2:#f6ebff; --line:#e4d5f5; --text:#241437; --muted:#6a5784;
+    --accent:#6d28d9; --accent-ink:#fff; --danger:#c0213d; --ok:#17884f; --shadow:0 8px 24px #7c3aed26; --glass:#fff7fccc;
+  }
+  * { box-sizing:border-box; }
+  [hidden] { display:none !important; }
+  html { color-scheme: dark; }
+  :root[data-theme=light] { color-scheme: light; }
+  body { margin:0; min-height:100vh; background:var(--bg); color:var(--text);
+         font:15px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; -webkit-tap-highlight-color:transparent; }
+  body::before { content:""; position:fixed; inset:0; z-index:-1; pointer-events:none;
+    background: radial-gradient(60vmax 40vmax at 0% 0%, #ff2e9333, transparent 60%), radial-gradient(60vmax 40vmax at 100% 10%, #22b8ff2e, transparent 60%), radial-gradient(50vmax 40vmax at 50% 100%, #7c3aed33, transparent 60%); }
+  svg.i { width:1.25em; height:1.25em; fill:currentColor; flex:none; vertical-align:middle; }
+  button { font:inherit; color:inherit; cursor:pointer; }
+  :focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+
+  /* ---------- header */
+  header { position:sticky; top:0; z-index:20; background:var(--grad); color:#fff; padding:max(env(safe-area-inset-top),0px) 0 0; box-shadow:0 2px 18px #7c3aed55; }
+  .bar { display:flex; align-items:center; gap:12px; max-width:1280px; margin:0 auto; padding:9px 16px; }
+  .logo { width:34px; height:34px; border-radius:10px; background:#ffffff26; display:grid; place-items:center; flex:none; }
+  .brand { font-weight:800; font-size:19px; letter-spacing:-.3px; white-space:nowrap; }
+  .tag { font-size:11px; opacity:.85; margin-top:-2px; white-space:nowrap; }
+  @media (max-width:560px) { .tag, .pill .nm { display:none; } .bar { gap:8px; padding:8px 12px; } }
+  @media (max-width:600px) { .ib.mv { display:none; } .item img { width:64px; } }
+  .sp { flex:1; }
+  .pill { font-size:12px; padding:3px 10px; border-radius:99px; background:#ffffff2e; font-weight:700; white-space:nowrap; }
+  .pill.host { background:var(--lime); color:#1b3a00; }
+  .iconbtn { width:38px; height:38px; border-radius:50%; border:0; background:#ffffff24; color:#fff; display:inline-grid; place-items:center; transition:background .15s, transform .15s; }
+  .iconbtn:hover { background:#ffffff40; } .iconbtn:active { transform:scale(.92); }
+
+  /* ---------- layout */
+  main { max-width:1280px; margin:0 auto; padding:14px 16px calc(40px + env(safe-area-inset-bottom)); display:grid; gap:16px; grid-template-columns:minmax(0,1fr); align-items:start; }
+  @media (min-width:900px) { main { grid-template-columns:minmax(340px,420px) minmax(0,1fr); gap:24px; padding-top:22px; } .side { position:sticky; top:84px; } }
+  @media (min-width:1500px) { main, .bar { max-width:1480px; } }
+
+  .card { background:var(--card); border:1px solid var(--line); border-radius:20px; padding:14px; box-shadow:var(--shadow); }
+
+  /* ---------- now playing */
+  .np { position:relative; overflow:hidden; border:0; color:#fff; background:var(--grad); background-size:200% 200%; animation:flow 16s ease-in-out infinite alternate; padding:16px; }
+  @keyframes flow { from { background-position:0% 40%; } to { background-position:100% 60%; } }
+  .np-top { display:flex; gap:14px; align-items:center; }
+  .np-art { width:96px; aspect-ratio:16/9; border-radius:14px; background:#ffffff26 center/cover; flex:none; position:relative; box-shadow:0 6px 18px #0004; }
+  @media (min-width:900px) { .np-top { flex-direction:column; align-items:stretch; } .np-art { width:100%; border-radius:16px; } .np-text { text-align:left; } }
+  .np-title { font-weight:800; font-size:17px; line-height:1.25; overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; }
+  .np-sub { opacity:.85; font-size:13px; margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .eq { display:inline-flex; gap:2px; align-items:flex-end; height:14px; margin-right:6px; vertical-align:-1px; }
+  .eq i { width:3px; background:#fff; border-radius:2px; height:30%; }
+  .playing .eq i { animation:eq 0.9s ease-in-out infinite alternate; }
+  .eq i:nth-child(2) { animation-delay:-.3s; } .eq i:nth-child(3) { animation-delay:-.6s; }
+  @keyframes eq { from { height:20%; } to { height:100%; } }
+  .prog { margin-top:12px; display:flex; align-items:center; gap:8px; font-size:12px; font-variant-numeric:tabular-nums; }
+  .track { flex:1; height:6px; border-radius:99px; background:#ffffff40; overflow:hidden; position:relative; }
+  .track.seek { cursor:pointer; height:8px; } .track.seek:hover { height:10px; }
+  .track > div { height:100%; width:0; background:linear-gradient(90deg,#fff,var(--lime)); border-radius:inherit; transition:width .9s linear; }
+  .ctl { display:flex; align-items:center; justify-content:center; gap:12px; margin-top:12px; }
+  .ctl .iconbtn { width:44px; height:44px; font-size:18px; }
+  .ctl .big { width:58px; height:58px; font-size:24px; background:#fff; color:var(--violet); box-shadow:0 6px 18px #0004; }
+  .ctl .big:hover { background:#fff; transform:scale(1.06); }
+  .ctl .on { background:#fff; color:var(--violet); }
+  .hint { opacity:.8; font-size:11.5px; text-align:center; margin-top:8px; }
+  #notice { margin-top:10px; padding:10px 12px; border-radius:12px; background:#ff8a9b26; color:var(--danger); font-size:13px; }
+
+  /* ---------- tabs */
+  .tabs { display:flex; gap:4px; position:relative; border-bottom:1px solid var(--line); margin-bottom:12px; overflow-x:auto; scrollbar-width:none; }
+  .tab { background:none; border:0; padding:11px 14px; font-weight:600; color:var(--muted); white-space:nowrap; display:inline-flex; align-items:center; gap:7px; border-bottom:3px solid transparent; margin-bottom:-1px; transition:color .15s, border-color .15s; border-radius:10px 10px 0 0; }
+  .tab:hover { color:var(--text); background:var(--card); }
+  .tab.on { color:var(--accent); border-image:var(--grad) 1; border-bottom-width:3px; font-weight:800; }
+  .badge { min-width:19px; height:19px; padding:0 5px; border-radius:99px; background:var(--pink); color:#fff; font-size:11px; font-weight:800; display:inline-grid; place-items:center; }
+  kbd { font:600 11px ui-monospace,SFMono-Regular,Menlo,monospace; padding:1px 6px; border-radius:6px; border:1px solid var(--line); border-bottom-width:2px; background:var(--card2); color:var(--muted); white-space:nowrap; }
+  .tab kbd { opacity:.7; } @media (hover:none), (max-width:899px) { .tab kbd, .kbdonly { display:none; } }
+  .panel { animation:rise .25s ease both; }
+  @keyframes rise { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:none; } }
+
+  /* ---------- lists */
+  .list { display:flex; flex-direction:column; gap:8px; }
+  .item { display:flex; align-items:center; gap:12px; padding:8px 10px; border-radius:16px; background:var(--card); border:1px solid var(--line); position:relative; transition:transform .15s, background .15s, border-color .15s, box-shadow .15s; }
+  .item:hover { background:var(--card2); }
+  .item.sel { border-color:var(--accent); box-shadow:0 0 0 2px color-mix(in srgb, var(--accent) 35%, transparent); }
+  .item.next::before { content:""; position:absolute; left:0; top:8px; bottom:8px; width:4px; border-radius:4px; background:var(--grad); }
+  .item.drag { opacity:.4; } .item.over { border-color:var(--pink); transform:translateY(2px); }
+  .item img { width:84px; aspect-ratio:16/9; object-fit:cover; border-radius:10px; background:var(--line); flex:none; }
+  .meta { flex:1; min-width:0; }
+  .t { font-weight:600; overflow:hidden; text-overflow:ellipsis; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; }
+  .s { color:var(--muted); font-size:12.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:1px; }
+  .acts { display:flex; gap:4px; align-items:center; flex:none; }
+  .rowact { opacity:0; transition:opacity .15s; }
+  .item:hover .rowact, .item.sel .rowact, .item:focus-within .rowact { opacity:1; }
+  @media (hover:none) { .rowact { opacity:1; } }
+  .ib { width:34px; height:34px; border-radius:10px; border:0; background:transparent; color:var(--muted); display:inline-grid; place-items:center; transition:background .12s, color .12s, transform .12s; }
+  .ib:hover { background:var(--card); color:var(--text); } .ib:active { transform:scale(.9); }
+  .ib.go:hover { background:#1fa85a; color:#fff; } .ib.bad:hover { background:#e5384f; color:#fff; }
+  .btn { display:inline-flex; align-items:center; justify-content:center; gap:7px; border-radius:99px; border:1px solid var(--line); background:var(--card); padding:9px 16px; font-weight:700; transition:transform .12s, box-shadow .12s, background .12s; }
+  .btn:hover { background:var(--card2); } .btn:active { transform:scale(.97); }
+  .btn.primary { border:0; color:#fff; background:var(--grad); box-shadow:0 4px 14px #7c3aed55; } .btn.primary:hover { box-shadow:0 6px 20px #7c3aed88; filter:brightness(1.07); }
+  .btn.danger { color:var(--danger); } .btn.sm { padding:6px 12px; font-size:13px; }
+  .btn:disabled { opacity:.5; cursor:default; }
+  .muted { color:var(--muted); }
+  .head { display:flex; align-items:center; gap:10px; margin-bottom:10px; flex-wrap:wrap; }
+  .empty { text-align:center; padding:40px 16px; color:var(--muted); }
+  .empty .logo2 { width:68px; height:68px; margin:0 auto 12px; border-radius:20px; background:var(--grad); display:grid; place-items:center; color:#fff; font-size:34px; }
+  h2 { font-size:13px; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); margin:18px 0 8px; }
+
+  /* ---------- forms */
+  input[type=text], input[type=search] { width:100%; padding:12px 14px; border-radius:14px; border:1px solid var(--line); background:var(--card); color:var(--text); font:inherit; font-size:16px; }
+  input:focus { outline:2px solid var(--accent); outline-offset:0; border-color:transparent; }
+  .search { display:flex; gap:8px; }
+  label.sw { display:inline-flex; gap:8px; align-items:center; cursor:pointer; }
+  .guest { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+  .dot { width:10px; height:10px; border-radius:50%; background:var(--line); flex:none; } .dot.on { background:var(--lime); box-shadow:0 0 8px var(--lime); }
+
+  /* ---------- join + dialogs */
+  .join { max-width:440px; margin:8vh auto 0; text-align:center; }
+  .join .logo2 { width:84px; height:84px; margin:0 auto 12px; border-radius:26px; background:var(--grad); display:grid; place-items:center; color:#fff; box-shadow:0 10px 34px #7c3aed77; }
+  .join h1 { margin:0 0 4px; font-size:28px; letter-spacing:-.5px; }
+  dialog { border:1px solid var(--line); border-radius:22px; background:var(--card); color:var(--text); padding:20px 22px; max-width:min(92vw,520px); box-shadow:var(--shadow); }
+  dialog::backdrop { background:#0009; backdrop-filter:blur(3px); }
+  dialog h3 { margin:0 0 10px; }
+  .keys { display:grid; grid-template-columns:auto 1fr; gap:8px 14px; align-items:center; font-size:14px; }
+  #toast { position:fixed; left:50%; bottom:calc(18px + env(safe-area-inset-bottom)); transform:translate(-50%,30px); opacity:0; background:var(--text); color:var(--bg); padding:10px 18px; border-radius:99px; z-index:60; transition:.25s; font-weight:600; max-width:90vw; pointer-events:none; }
+  #toast.show { opacity:1; transform:translate(-50%,0); }
+  #offline { position:fixed; left:50%; transform:translateX(-50%); bottom:calc(14px + env(safe-area-inset-bottom)); z-index:50; background:var(--danger); color:#1b0b0b; text-align:center; font-weight:700; padding:8px 16px; border-radius:99px; font-size:13px; box-shadow:var(--shadow); max-width:92vw; white-space:nowrap; }
+  @media (prefers-reduced-motion:reduce) { *, *::before, *::after { animation:none !important; transition:none !important; } }
 </style>
 </head>
 <body>
-<main>
-  <div id="join" class="hidden">
-    <h1>Dołącz do imprezy</h1>
-    <div class="card">
-      <p class="muted" style="margin-top:0">Podaj imię, żeby inni wiedzieli, kto proponuje utwory.</p>
-      <input id="name" type="text" maxlength="24" placeholder="Twoje imię" autocomplete="nickname">
-      <p id="joinErr" style="color:var(--danger)"></p>
-      <button id="joinBtn" class="primary" style="width:100%">Dołącz</button>
-    </div>
+<div id="offline" hidden>Brak połączenia z hostem – próbuję ponownie…</div>
+<header>
+  <div class="bar">
+    <div class="logo" aria-hidden="true"><svg class="i" viewBox="0 0 24 24" style="width:22px;height:22px"><rect x="3" y="11" width="3.4" height="9" rx="1.7"/><rect x="10.3" y="4" width="3.4" height="16" rx="1.7"/><rect x="17.6" y="8" width="3.4" height="12" rx="1.7"/></svg></div>
+    <div><div class="brand">Party Queue</div><div class="tag">kolejka na każdą imprezę</div></div>
+    <div class="sp"></div>
+    <span id="role" class="pill" hidden></span>
+    <button class="iconbtn" id="helpBtn" title="Skróty klawiaturowe (?)" aria-label="Skróty klawiaturowe" hidden></button>
+    <button class="iconbtn" id="themeBtn" title="Motyw: auto / jasny / ciemny (D)" aria-label="Zmień motyw"></button>
   </div>
+</header>
 
-  <div id="app" class="hidden">
-    <div class="row">
-      <h1 class="grow" id="hello"></h1>
-      <span id="role" class="pill"></span>
-    </div>
+<div id="join" hidden>
+  <div class="join">
+    <div class="logo2"><svg class="i" viewBox="0 0 24 24" style="width:46px;height:46px"><rect x="3" y="11" width="3.4" height="9" rx="1.7"/><rect x="10.3" y="4" width="3.4" height="16" rx="1.7"/><rect x="17.6" y="8" width="3.4" height="12" rx="1.7"/></svg></div>
+    <h1>Dołącz do imprezy</h1>
+    <p class="muted">Podaj imię, żeby inni wiedzieli, kto proponuje utwory.</p>
+    <form id="joinForm" class="card" style="text-align:left">
+      <input id="name" type="text" maxlength="24" placeholder="Twoje imię" autocomplete="nickname" aria-label="Twoje imię" autofocus>
+      <p id="joinErr" style="color:var(--danger);min-height:1.4em;margin:8px 2px"></p>
+      <button id="joinBtn" class="btn primary" style="width:100%" type="submit"></button>
+    </form>
+  </div>
+</div>
 
-    <div class="card">
-      <div class="row">
-        <img id="npThumb" alt="" style="width:96px;height:54px;object-fit:cover;border-radius:8px;background:var(--line)">
-        <div class="grow">
-          <div class="sub">Teraz gra</div>
-          <div id="npTitle" class="title"></div>
-          <div id="npSub" class="sub"></div>
+<main id="app" hidden>
+  <aside class="side">
+    <section class="card np" id="np">
+      <div class="np-top">
+        <div class="np-art" id="npArt"></div>
+        <div class="np-text" style="min-width:0">
+          <div class="np-title" id="npTitle"></div>
+          <div class="np-sub" id="npSub"></div>
         </div>
       </div>
-      <div class="bar"><div id="npBar"></div></div>
-      <div id="hostCtl" class="ctl hidden">
-        <button id="bPrev">⏮</button>
-        <button id="bToggle">⏯</button>
-        <button id="bNext">⏭</button>
+      <div class="prog"><span id="npPos">0:00</span><div class="track" id="npTrack"><div id="npBar"></div></div><span id="npDur">0:00</span></div>
+      <div class="ctl" id="hostCtl" hidden>
+        <button class="iconbtn" id="bRepeat" title="Powtarzaj kolejkę (R)" aria-label="Powtarzaj"></button>
+        <button class="iconbtn" id="bPrev" title="Poprzedni (P)" aria-label="Poprzedni"></button>
+        <button class="iconbtn big" id="bToggle" title="Odtwarzaj / pauza (spacja)" aria-label="Odtwarzaj lub pauza"></button>
+        <button class="iconbtn" id="bNext" title="Następny (N)" aria-label="Następny"></button>
       </div>
-    </div>
-
-    <div id="notice" class="card hidden" style="margin-top:10px;color:var(--danger)"></div>
-
-    <div class="tabs" id="tabs"></div>
-
-    <section id="tab-queue"></section>
-
-    <section id="tab-add" class="hidden">
-      <div class="row">
-        <div class="grow"><input id="q" type="text" placeholder="Szukaj utworu lub wklej link" enterkeyhint="search"></div>
-        <button id="qBtn" class="primary">Szukaj</button>
-      </div>
-      <div id="results" class="card hidden" style="margin-top:10px"></div>
-      <h2>Moje propozycje</h2>
-      <div id="mine" class="card"></div>
-      <div id="reqBox" style="margin-top:14px"></div>
+      <div class="hint kbdonly" id="npHint" hidden>Spacja – pauza · N / P – następny / poprzedni · kliknij pasek, aby przewinąć</div>
     </section>
+    <div id="notice" hidden></div>
+  </aside>
 
-    <section id="tab-proposals" class="hidden"></section>
-    <section id="tab-guests" class="hidden"></section>
-    <section id="tab-playlist" class="hidden"></section>
-  </div>
+  <section>
+    <nav class="tabs" id="tabs" role="tablist"></nav>
+    <div id="panel" class="panel"></div>
+  </section>
 </main>
-<div id="toast"></div>
+
+<dialog id="help">
+  <h3>Skróty klawiaturowe</h3>
+  <div class="keys" id="keys"></div>
+  <form method="dialog" style="margin-top:16px;text-align:right"><button class="btn primary sm">Zamknij</button></form>
+</dialog>
+<div id="toast" role="status" aria-live="polite"></div>
 
 <script>
 (() => {
   'use strict';
   const $ = (id) => document.getElementById(id);
+
+  // ------------------------------------------------------------------ helpers
+  const store = {
+    get(k) { try { return localStorage.getItem(k) || ''; } catch { return ''; } },
+    set(k, v) { try { localStorage.setItem(k, v); } catch {} },
+    del(k) { try { localStorage.removeItem(k); } catch {} },
+  };
+  const ICON = {
+    play: 'M8 5v14l11-7z', pause: 'M6 19h4V5H6v14zm8-14v14h4V5h-4z',
+    next: 'M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z', prev: 'M6 6h2v12H6zm3.5 6l8.5 6V6z',
+    close: 'M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z',
+    trash: 'M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z',
+    up: 'M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z', down: 'M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6z',
+    top: 'M8 11h3v10h2V11h3l-4-4-4 4zM4 3v2h16V3H4z',
+    search: 'M15.5 14h-.79l-.28-.27A6.47 6.47 0 0016 9.5 6.5 6.5 0 109.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z',
+    add: 'M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z', check: 'M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z',
+    repeat: 'M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z',
+    sun: 'M6.76 4.84l-1.8-1.79-1.41 1.41 1.79 1.79 1.42-1.41zM4 10.5H1v2h3v-2zm9-9.95h-2V3.5h2V.55zm7.45 3.91l-1.41-1.41-1.79 1.79 1.41 1.41 1.79-1.79zm-3.21 13.7l1.79 1.8 1.41-1.41-1.8-1.79-1.4 1.4zM20 10.5v2h3v-2h-3zm-8-5c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6-2.69-6-6-6zm-1 16.95h2V19.5h-2v2.95zm-7.45-3.91l1.41 1.41 1.79-1.8-1.41-1.41-1.79 1.8z',
+    moon: 'M12 3a9 9 0 109 9c0-.46-.04-.92-.1-1.36a5.39 5.39 0 01-4.4 2.26 5.4 5.4 0 01-3.14-9.8c-.44-.06-.9-.1-1.36-.1z',
+    auto: 'M12 2a10 10 0 100 20 10 10 0 000-20zm0 18V4a8 8 0 010 16z',
+    keyboard: 'M20 5H4c-1.1 0-1.99.9-1.99 2L2 17c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm-9 3h2v2h-2V8zm0 3h2v2h-2v-2zM8 8h2v2H8V8zm0 3h2v2H8v-2zm-1 2H5v-2h2v2zm0-3H5V8h2v2zm9 7H8v-2h8v2zm0-4h-2v-2h2v2zm0-3h-2V8h2v2zm3 3h-2v-2h2v2zm0-3h-2V8h2v2z',
+    group: 'M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z',
+    list: 'M15 6H3v2h12V6zm0 4H3v2h12v-2zM3 16h8v-2H3v2zM17 6v8.18c-.31-.11-.65-.18-1-.18-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3V8h3V6h-5z',
+    link: 'M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z',
+    send: 'M2.01 21L23 12 2.01 3 2 10l15 2-15 2z', inbox: 'M19 3H4.99C3.89 3 3 3.9 3 5v14c0 1.1.89 2 1.99 2H19c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 12h-4c0 1.66-1.35 3-3 3s-3-1.34-3-3H4.99V5H19v10z',
+    star: 'M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z',
+    sweep: 'M15 16h4v2h-4zm0-8h7v2h-7zm0 4h6v2h-6zM3 18c0 1.1.9 2 2 2h6c1.1 0 2-.9 2-2V8H3v10zM14 5h-3l-1-1H6L5 5H2v2h12z',
+    bars: 'M3 11h3.4v9H3zm7.3-7h3.4v16h-3.4zm7.3 4H21v12h-3.4z',
+  };
+  const icon = (name) => `<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="${ICON[name]}"/></svg>`;
+  const IS_TOUCH = matchMedia('(hover:none)').matches;
+
   const el = (tag, props = {}, ...kids) => {
     const n = document.createElement(tag);
     for (const [k, v] of Object.entries(props)) {
+      if (v === undefined || v === null || v === false) continue;
       if (k === 'class') n.className = v;
+      else if (k === 'html') n.innerHTML = v;
       else if (k === 'on') for (const [ev, fn] of Object.entries(v)) n.addEventListener(ev, fn);
-      else if (v !== undefined && v !== null) n.setAttribute(k, v);
+      else n.setAttribute(k, v === true ? '' : v);
     }
     for (const kid of kids.flat()) if (kid !== null && kid !== undefined && kid !== false) n.append(kid.nodeType ? kid : document.createTextNode(String(kid)));
     return n;
   };
+  const ibtn = (name, label, fn, cls = '') => el('button', { class: 'ib ' + cls, title: label, 'aria-label': label, html: icon(name), on: { click: (e) => { e.stopPropagation(); fn(e); } } });
+  const btn = (name, label, fn, cls = '') => el('button', { class: 'btn ' + cls, on: { click: fn }, html: (name ? icon(name) : '') }, label);
+  const fmt = (ms) => { const s = Math.max(0, Math.floor(ms / 1000)); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
 
-  const params = new URLSearchParams(location.search);
-  let secret = params.get('j') || sessionStorage.getItem('pq_secret') || '';
-  if (params.get('j')) sessionStorage.setItem('pq_secret', secret);
-  let token = localStorage.getItem('pq_token') || '';
-  let state = null, ws = null, tab = 'queue', results = [];
-
+  let toastTimer = 0;
   function toast(msg) {
-    const t = $('toast'); t.textContent = msg; t.style.display = 'block';
-    clearTimeout(toast.h); toast.h = setTimeout(() => t.style.display = 'none', 3200);
+    const t = $('toast'); t.textContent = msg; t.classList.add('show');
+    clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 3000);
   }
+
+  // ------------------------------------------------------------------ theme
+  const MODES = ['auto', 'light', 'dark'];
+  let mode = MODES.includes(store.get('pq_theme')) ? store.get('pq_theme') : 'auto';
+  const dark$ = matchMedia('(prefers-color-scheme: light)');
+  function applyTheme() {
+    const light = mode === 'light' || (mode === 'auto' && dark$.matches);
+    document.documentElement.dataset.theme = light ? 'light' : 'dark';
+    $('themeBtn').innerHTML = icon(mode === 'auto' ? 'auto' : mode === 'light' ? 'sun' : 'moon');
+    $('themeBtn').title = 'Motyw: ' + { auto: 'automatyczny', light: 'jasny', dark: 'ciemny' }[mode] + ' (D)';
+  }
+  function cycleTheme() { mode = MODES[(MODES.indexOf(mode) + 1) % 3]; store.set('pq_theme', mode); applyTheme(); }
+  dark$.addEventListener?.('change', applyTheme);
+  $('themeBtn').onclick = cycleTheme;
+  $('helpBtn').innerHTML = icon('keyboard');
+  $('joinBtn').innerHTML = icon('check') + ' Dołącz';
+
+  // ------------------------------------------------------------------ session
+  let token = store.get('pq_token');
+  let state = null, ws = null, retry = 0, tab = 'queue', results = [], searching = false, selected = null, dragUid = null;
 
   async function api(path, body, method) {
     const r = await fetch(path, {
@@ -136,182 +284,366 @@
       body: body === undefined ? undefined : JSON.stringify(body),
     });
     let data = {};
-    try { data = await r.json(); } catch (e) {}
-    if (r.status === 401) { logout(); throw new Error('Sesja wygasła'); }
+    try { data = await r.json(); } catch {}
+    if (r.status === 401) { logout(); throw new Error('Sesja wygasła – dołącz ponownie'); }
     if (!r.ok) throw new Error(data.error || 'Błąd ' + r.status);
     return data;
   }
-  const act = (path, body) => api(path, body || {}).catch((e) => toast(e.message));
+  const act = (path, body, ok) => api(path, body || {}).then((r) => { if (ok) toast(ok); return r; }).catch((e) => { toast(e.message); });
 
+  function showJoin() {
+    $('app').hidden = true; $('join').hidden = false; $('helpBtn').hidden = true; $('role').hidden = true;
+    $('name').value = $('name').value || store.get('pq_name');
+    setTimeout(() => $('name').focus(), 50);
+  }
   function logout() {
-    localStorage.removeItem('pq_token'); token = '';
+    store.del('pq_token'); token = ''; state = null;
     if (ws) { ws.onclose = null; ws.close(); ws = null; }
-    $('app').classList.add('hidden'); $('join').classList.remove('hidden');
-    $('name').value = localStorage.getItem('pq_name') || '';
+    $('offline').hidden = true;
+    showJoin();
   }
 
-  $('joinBtn').onclick = async () => {
+  $('joinForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
     $('joinErr').textContent = '';
     const name = $('name').value.trim();
     if (!name) { $('joinErr').textContent = 'Podaj imię'; return; }
+    $('joinBtn').disabled = true;
     try {
-      const r = await fetch('/api/join', { method: 'POST', body: JSON.stringify({ name, secret }) });
-      const data = await r.json();
+      const r = await fetch('/api/join', { method: 'POST', body: JSON.stringify({ name }) });
+      let data = {};
+      try { data = await r.json(); } catch {}
       if (!r.ok) throw new Error(data.error || 'Nie udało się dołączyć');
-      token = data.token; localStorage.setItem('pq_token', token); localStorage.setItem('pq_name', name);
-      history.replaceState(null, '', location.pathname);
-      start();
-    } catch (e) { $('joinErr').textContent = e.message; }
-  };
-  $('name').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('joinBtn').click(); });
+      token = data.token; store.set('pq_token', token); store.set('pq_name', name);
+      await start();
+    } catch (err) { $('joinErr').textContent = err.message; }
+    $('joinBtn').disabled = false;
+  });
 
   function connect() {
-    if (ws) return;
+    if (ws || !token) return;
     ws = new WebSocket((location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + '/ws?token=' + encodeURIComponent(token));
-    ws.onmessage = (e) => { state = JSON.parse(e.data); render(); };
-    ws.onclose = () => { ws = null; if (token) setTimeout(connect, 1500); };
+    ws.onopen = () => { retry = 0; $('offline').hidden = true; };
+    ws.onmessage = (e) => { try { state = JSON.parse(e.data); render(); } catch (err) { console.error(err); } };
+    ws.onclose = () => {
+      ws = null;
+      if (!token) return;
+      $('offline').hidden = false;
+      setTimeout(connect, Math.min(1000 * 2 ** retry++, 8000));
+    };
   }
 
   async function start() {
-    try {
-      state = await api('/api/state');
-    } catch (e) { return; }
-    $('join').classList.add('hidden'); $('app').classList.remove('hidden');
+    try { state = await api('/api/state'); } catch { return; }
+    $('join').hidden = true; $('app').hidden = false; $('helpBtn').hidden = false;
     render(); connect();
   }
 
-  const isHost = () => state && state.me.role === 'HOST';
+  const isHost = () => !!state && state.me.role === 'HOST';
 
-  function fmt(ms) { const s = Math.floor(ms / 1000); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); }
-
-  function item(t, actions, sub) {
-    return el('div', { class: 'item' },
-      el('img', { src: t.thumb, alt: '', loading: 'lazy' }),
-      el('div', { class: 'grow' }, el('div', { class: 'title' }, t.title),
-        el('div', { class: 'sub' }, sub !== undefined ? sub : [t.channel, t.dur].filter(Boolean).join(' · '))),
-      actions || null);
+  // ------------------------------------------------------------------ rendering
+  // Updates arrive every second (playback position). Sections are rebuilt only when their own data changed,
+  // so hovering, focus, text being typed and scroll positions survive.
+  const sigs = {};
+  function section(key, data, build) {
+    const sig = JSON.stringify(data);
+    if (sigs[key] === sig) return false;
+    sigs[key] = sig; build(); return true;
   }
-  const btn = (label, fn, cls) => el('button', { class: 'small ' + (cls || ''), on: { click: fn } }, label);
 
-  function renderTabs() {
-    const host = isHost();
-    const tabs = [['queue', 'Kolejka'], ['add', 'Dodaj']];
-    if (host) tabs.push(['proposals', 'Propozycje', state.proposals.length], ['guests', 'Goście', state.guests.filter(g => g.hostRequested).length], ['playlist', 'Playlista']);
-    if (!tabs.some(t => t[0] === tab)) tab = 'queue';
-    $('tabs').replaceChildren(...tabs.map(([id, label, n]) =>
-      el('button', { class: id === tab ? 'on' : '', on: { click: () => { tab = id; render(); } } }, label, n ? el('span', { class: 'badge' }, n) : null)));
-    for (const id of ['queue', 'add', 'proposals', 'guests', 'playlist']) $('tab-' + id).classList.toggle('hidden', id !== tab);
-  }
+  const tabsFor = () => {
+    const t = [['queue', 'Kolejka', 'list', 0], ['search', 'Szukaj', 'search', 0]];
+    if (isHost()) t.push(['proposals', 'Propozycje', 'inbox', state.proposals.length], ['guests', 'Goście', 'group', state.guests.filter((g) => g.hostRequested).length], ['playlist', 'Playlista', 'link', 0]);
+    return t;
+  };
 
   function render() {
     if (!state) return;
     const host = isHost();
-    $('hello').textContent = state.me.name;
-    const role = $('role'); role.textContent = host ? 'host' : 'gość'; role.classList.toggle('host', host);
+    const role = $('role'); role.hidden = false; role.replaceChildren(el('span', { class: 'nm' }, (state.me.name || '') + ' · '), host ? 'host' : 'gość'); role.classList.toggle('host', host);
 
+    // now playing
     const now = state.now, tr = now.track;
-    $('npTitle').textContent = tr ? tr.title : 'Nic nie gra';
-    $('npThumb').src = tr ? tr.thumb : '';
-    $('npThumb').style.visibility = tr ? 'visible' : 'hidden';
-    $('npSub').textContent = !tr ? (state.playlist ? 'Playlista: ' + state.playlist : '') :
-      now.status === 'loading' ? 'Ładowanie…' : now.status === 'ad' ? 'Reklama' : fmt(now.pos) + ' / ' + fmt(now.dur) + (tr.by ? ' · ' + tr.by : '');
+    section('np', [tr, now.status, state.playlist], () => {
+      $('npTitle').textContent = tr ? tr.title : 'Nic nie gra';
+      $('npArt').style.backgroundImage = tr ? `url("${tr.thumb}")` : '';
+      $('npArt').innerHTML = tr ? '' : icon('bars').replace('class="i"', 'class="i" style="width:40px;height:40px;position:absolute;inset:0;margin:auto;opacity:.8"');
+    });
+    $('np').classList.toggle('playing', now.status === 'playing');
+    $('npSub').innerHTML = '';
+    $('npSub').append(el('span', { class: 'eq', html: '<i></i><i></i><i></i>' }),
+      !tr ? (state.playlist ? 'Playlista: ' + state.playlist : 'Poproś hosta o playlistę') :
+      now.status === 'loading' ? 'Ładowanie…' : now.status === 'ad' ? 'Reklama' : [tr.channel, tr.by && tr.src !== 'PLAYLIST' ? 'od: ' + tr.by : ''].filter(Boolean).join(' · '));
+    $('npPos').textContent = fmt(now.pos); $('npDur').textContent = fmt(now.dur);
     $('npBar').style.width = now.dur ? Math.min(100, now.pos / now.dur * 100) + '%' : '0';
-    $('hostCtl').classList.toggle('hidden', !host);
-    $('bToggle').textContent = now.status === 'playing' ? '⏸' : '▶';
-    const nb = $('notice'); nb.textContent = state.notice || ''; nb.classList.toggle('hidden', !state.notice);
+    $('npTrack').classList.toggle('seek', host);
+    $('npHint').hidden = !host;
+    $('hostCtl').hidden = !host;
+    $('bToggle').innerHTML = icon(now.status === 'playing' ? 'pause' : 'play');
+    $('bRepeat').innerHTML = icon('repeat'); $('bRepeat').classList.toggle('on', !!state.repeat);
+    $('bRepeat').setAttribute('aria-pressed', !!state.repeat);
+    $('bPrev').innerHTML = icon('prev'); $('bNext').innerHTML = icon('next');
+    const nb = $('notice'); nb.textContent = state.notice || ''; nb.hidden = !state.notice;
 
-    renderTabs();
+    // tabs
+    const tabs = tabsFor();
+    if (!tabs.some((t) => t[0] === tab)) tab = 'queue';
+    section('tabs', [tabs, tab], () => {
+      $('tabs').replaceChildren(...tabs.map(([id, label, ic, n], i) =>
+        el('button', { class: 'tab' + (id === tab ? ' on' : ''), role: 'tab', 'aria-selected': id === tab, on: { click: () => setTab(id) } },
+          el('span', { html: icon(ic) }), label, n ? el('span', { class: 'badge' }, n) : null, el('kbd', {}, String(i + 1)))));
+    });
 
-    const queueView = (state.queue.length === 0 ? el('p', { class: 'muted' }, 'Kolejka jest pusta.') :
-      el('div', { class: 'card' }, state.queue.map((t) => item(t, host ? el('div', { class: 'row' },
-        btn('▲', () => act('/api/queue/' + t.uid + '/up')), btn('▼', () => act('/api/queue/' + t.uid + '/down')),
-        btn('▶', () => act('/api/queue/' + t.uid + '/playnow')), btn('✕', () => act('/api/queue/' + t.uid + '/remove'), 'danger')) : null,
-        [t.channel, t.dur, t.src === 'PLAYLIST' ? '' : 'dodał(a) ' + t.by].filter(Boolean).join(' · ')))));
+    renderPanel();
+  }
 
-    const mine = state.proposals.filter((p) => p.byId === state.me.id);
-    const queueHead = host && state.queue.length
-      ? el('div', { class: 'row', style: 'margin-bottom:8px' },
-          el('span', { class: 'grow muted' }, 'W kolejce: ' + state.queue.length),
-          btn('Wyczyść kolejkę', () => confirm('Wyczyścić całą kolejkę?') && act('/api/queue/clear'), 'danger'))
-      : null;
-    $('tab-queue').replaceChildren(...[queueHead, queueView].filter(Boolean));
+  function setTab(id) {
+    if (tab === id) return;
+    tab = id; delete sigs.tabs; delete sigs.panel; render();
+    const panel = $('panel'); panel.classList.remove('panel'); void panel.offsetWidth; panel.classList.add('panel');
+    if (id === 'search') setTimeout(() => $('q') && $('q').focus(), 30);
+  }
 
-    $('mine').replaceChildren(...(mine.length === 0
-      ? [el('span', { class: 'muted' }, host ? 'Jako host dodajesz utwory od razu.' : 'Nic nie czeka na akceptację.')]
-      : mine.map((p) => item(p, null, 'czeka na akceptację'))));
-
-    const rb = $('reqBox');
-    if (host) rb.replaceChildren();
-    else if (state.me.hostRequested) rb.replaceChildren(el('p', { class: 'muted' }, 'Prośba o uprawnienia hosta czeka na akceptację.'));
-    else rb.replaceChildren(el('button', { on: { click: async () => { await act('/api/hostrequest'); toast('Wysłano prośbę do hosta'); } } }, 'Poproś o uprawnienia hosta'));
-
-    if (host) {
-      $('tab-proposals').replaceChildren(state.proposals.length === 0 ? el('p', { class: 'muted' }, 'Brak propozycji.') :
-        el('div', { class: 'card' }, state.proposals.map((p) => item(p, el('div', { class: 'row' },
-          btn('Odrzuć', () => act('/api/proposals/' + p.id + '/reject')), btn('Zatwierdź', () => act('/api/proposals/' + p.id + '/approve'), 'primary')),
-          p.by + ' · ' + (p.channel || '')))));
-
-      $('tab-guests').replaceChildren(state.guests.length === 0 ? el('p', { class: 'muted' }, 'Nikt jeszcze nie dołączył.') :
-        el('div', { class: 'card' }, state.guests.map((g) => el('div', { class: 'item' },
-          el('div', { class: 'grow' }, el('div', { class: 'title' }, (g.online ? '● ' : '○ ') + g.name),
-            el('div', { class: 'sub' }, g.role === 'HOST' ? 'Współhost' : g.hostRequested ? 'Prosi o uprawnienia hosta' : 'Gość')),
-          el('div', { class: 'row' },
-            g.hostRequested ? [btn('Odrzuć', () => act('/api/guests/' + g.id + '/reject')), btn('Zatwierdź', () => act('/api/guests/' + g.id + '/approve'), 'primary')] : null,
-            g.role === 'HOST' && g.id !== state.me.id ? btn('Odbierz host', () => act('/api/guests/' + g.id + '/demote')) : null,
-            g.id !== state.me.id ? btn('Usuń', () => confirm('Usunąć ' + g.name + '?') && act('/api/guests/' + g.id + '/kick'), 'danger') : null)))));
-
-      if (!$('plUrl')) {
-        $('tab-playlist').replaceChildren(
-          el('p', { class: 'muted' }, 'Wczytanie playlisty zastępuje utwory z poprzedniej playlisty. Zatwierdzone propozycje zostają.'),
-          el('input', { id: 'plUrl', type: 'text', placeholder: 'Link do publicznej playlisty YouTube' }),
-          el('label', { style: 'display:block;margin:10px 0' }, el('input', { id: 'plShuffle', type: 'checkbox', checked: 'checked' }), ' Losowa kolejność'),
-          el('button', { class: 'primary', on: { click: async (e) => {
-            e.target.disabled = true;
-            try { await api('/api/playlist', { url: $('plUrl').value, shuffle: $('plShuffle').checked }); toast('Playlista wczytana'); } catch (er) { toast(er.message); }
-            e.target.disabled = false; } } }, 'Wczytaj playlistę'));
-      }
-    } else if ($('plUrl')) {
-      $('tab-playlist').replaceChildren();
+  function renderPanel() {
+    const host = isHost();
+    const panel = $('panel');
+    if (tab === 'queue') {
+      section('panel', ['queue', state.queue, host, selected, state.repeat], () => {
+        panel.replaceChildren(queueView(host));
+      });
+    } else if (tab === 'search') {
+      const mine = state.proposals.filter((p) => p.byId === state.me.id);
+      section('panel', ['search', mine, host, state.me.hostRequested, results, searching], () => {
+        const keep = document.activeElement && document.activeElement.id === 'q' ? { v: $('q').value, s: $('q').selectionStart } : null;
+        const prev = $('q') ? $('q').value : '';
+        panel.replaceChildren(searchView(mine, host));
+        $('q').value = keep ? keep.v : prev;
+        if (keep) { $('q').focus(); $('q').setSelectionRange(keep.s, keep.s); }
+      });
+    } else if (tab === 'proposals') {
+      section('panel', ['proposals', state.proposals], () => panel.replaceChildren(proposalsView()));
+    } else if (tab === 'guests') {
+      section('panel', ['guests', state.guests, state.joinOpen], () => panel.replaceChildren(guestsView()));
+    } else if (tab === 'playlist') {
+      section('panel', ['playlist', state.playlist], () => {
+        const keep = $('plUrl') ? { u: $('plUrl').value, s: $('plShuffle').checked } : null;
+        panel.replaceChildren(playlistView());
+        if (keep) { $('plUrl').value = keep.u; $('plShuffle').checked = keep.s; }
+      });
     }
-
-    renderResults();
   }
 
-  function renderResults() {
-    const box = $('results');
-    box.classList.toggle('hidden', results.length === 0);
-    box.replaceChildren(...results.map((m) => item(m, isHost() ?
-      el('div', { class: 'row' }, btn('Następna', () => propose(m, true)), btn('Dodaj', () => propose(m, false), 'primary')) :
-      btn('Zaproponuj', () => propose(m, false), 'primary'))));
+  const rowSub = (t) => [t.channel, t.dur, t.src === 'PLAYLIST' ? '' : 'dodał(a) ' + t.by].filter(Boolean).join(' · ');
+
+  function trackItem(t, sub, actions, extra = {}) {
+    return el('div', Object.assign({ class: 'item' }, extra),
+      el('img', { src: t.thumb, alt: '', loading: 'lazy', draggable: 'false' }),
+      el('div', { class: 'meta' }, el('div', { class: 't', title: t.title }, t.title), el('div', { class: 's' }, sub)),
+      actions);
   }
 
+  function empty(text, sub) {
+    return el('div', { class: 'empty' }, el('div', { class: 'logo2', html: icon('bars').replace('class="i"', 'class="i" style="width:34px;height:34px"') }), el('b', {}, text), sub ? el('div', {}, sub) : null);
+  }
+
+  // ---- queue
+  function queueView(host) {
+    const q = state.queue;
+    if (!q.length) return empty('Kolejka jest pusta', host ? 'Wczytaj playlistę w zakładce „Playlista” albo wyszukaj utwór.' : 'Wyszukaj utwór i zaproponuj go hostowi.');
+    const wrap = el('div');
+    wrap.append(el('div', { class: 'head' },
+      el('b', {}, 'W kolejce: ' + q.length),
+      el('span', { class: 'sp', style: 'flex:1' }),
+      host ? el('span', { class: 'muted', style: 'font-size:12px' }, IS_TOUCH ? 'Dotknij utwór, aby przenieść go na górę' : 'Kliknij – zaznacz · dwukrotnie – graj · przeciągnij – zmień kolejność') : null,
+      host ? btn('sweep', 'Wyczyść', () => confirm('Wyczyścić całą kolejkę?') && act('/api/queue/clear', {}, 'Kolejka wyczyszczona'), 'danger sm') : null));
+    const list = el('div', { class: 'list', id: 'qlist' });
+    q.forEach((t, i) => {
+      const acts = host ? el('div', { class: 'acts rowact' },
+        ibtn('top', 'Na górę kolejki (T)', () => act('/api/queue/' + t.uid + '/top'), 'mv'),
+        ibtn('up', 'Wyżej (Alt+↑)', () => act('/api/queue/' + t.uid + '/up'), 'mv'),
+        ibtn('down', 'Niżej (Alt+↓)', () => act('/api/queue/' + t.uid + '/down'), 'mv'),
+        ibtn('play', 'Graj teraz (Enter)', () => act('/api/queue/' + t.uid + '/playnow'), 'go'),
+        ibtn('trash', 'Usuń (Delete)', () => act('/api/queue/' + t.uid + '/remove'), 'bad')) : null;
+      const item = trackItem(t, (i === 0 ? 'NASTĘPNA · ' : '') + rowSub(t), acts, {
+        class: 'item' + (i === 0 ? ' next' : '') + (selected === t.uid ? ' sel' : ''),
+        'data-uid': t.uid, tabindex: host ? '0' : null,
+      });
+      if (host) {
+        item.addEventListener('click', () => {
+          // A finger has no hover or keyboard: a tap sends the song to the top, like in the host app.
+          if (IS_TOUCH) { if (i > 0) act('/api/queue/' + t.uid + '/top', {}, 'Na górze kolejki'); return; }
+          selected = t.uid; markSelected();
+        });
+        item.addEventListener('dblclick', () => act('/api/queue/' + t.uid + '/playnow'));
+        item.draggable = !IS_TOUCH;
+        item.addEventListener('dragstart', (e) => { dragUid = t.uid; item.classList.add('drag'); e.dataTransfer.effectAllowed = 'move'; try { e.dataTransfer.setData('text/plain', t.uid); } catch {} });
+        item.addEventListener('dragend', () => { dragUid = null; item.classList.remove('drag'); list.querySelectorAll('.over').forEach((n) => n.classList.remove('over')); });
+        item.addEventListener('dragover', (e) => { if (dragUid && dragUid !== t.uid) { e.preventDefault(); item.classList.add('over'); } });
+        item.addEventListener('dragleave', () => item.classList.remove('over'));
+        item.addEventListener('drop', (e) => {
+          e.preventDefault(); item.classList.remove('over');
+          const from = state.queue.findIndex((x) => x.uid === dragUid);
+          if (from >= 0 && from !== i) act('/api/queue/' + dragUid + '/move', { delta: i - from });
+        });
+      }
+      list.append(item);
+    });
+    wrap.append(list);
+    return wrap;
+  }
+
+  function markSelected() {
+    document.querySelectorAll('#qlist .item').forEach((n) => n.classList.toggle('sel', n.dataset.uid === selected));
+    sigs.panel = null;
+    const n = document.querySelector('#qlist .item.sel'); if (n) n.scrollIntoView({ block: 'nearest' });
+  }
+
+  // ---- search
   async function propose(m, next) {
     try {
       await api('/api/propose', { videoId: m.vid, next });
-      toast(isHost() ? 'Dodano do kolejki' : 'Wysłano propozycję do hosta');
+      toast(isHost() ? (next ? 'Zagra jako następny' : 'Dodano do kolejki') : 'Wysłano propozycję do hosta');
     } catch (e) { toast(e.message); }
   }
-
   async function search() {
     const q = $('q').value.trim();
-    if (!q) return;
-    $('qBtn').disabled = true; $('qBtn').textContent = 'Szukam…';
+    if (!q || searching) return;
+    searching = true; render();
     try {
       const r = await api('/api/search?q=' + encodeURIComponent(q));
       results = r.results || [];
       if (!results.length) toast('Nic nie znaleziono');
-      renderResults();
     } catch (e) { toast(e.message); }
-    $('qBtn').disabled = false; $('qBtn').textContent = 'Szukaj';
+    searching = false; render();
   }
-  $('qBtn').onclick = search;
-  $('q').addEventListener('keydown', (e) => { if (e.key === 'Enter') search(); });
+  function searchView(mine, host) {
+    const w = el('div');
+    w.append(el('form', { class: 'search', on: { submit: (e) => { e.preventDefault(); search(); } } },
+      el('input', { id: 'q', type: 'search', placeholder: 'Szukaj utworu lub wklej link do filmu', enterkeyhint: 'search', autocomplete: 'off', 'aria-label': 'Szukaj utworu' }),
+      el('button', { class: 'btn primary', type: 'submit', disabled: searching, html: icon('search') }, searching ? 'Szukam…' : 'Szukaj')));
+    if (results.length) {
+      w.append(el('div', { class: 'list', style: 'margin-top:12px' }, results.map((m) => trackItem(m, [m.channel, m.dur].filter(Boolean).join(' · '),
+        el('div', { class: 'acts' },
+          host ? el('button', { class: 'btn sm', html: icon('top'), on: { click: () => propose(m, true) }, title: 'Zagraj jako następny' }, 'Następna') : null,
+          el('button', { class: 'btn primary sm', html: icon(host ? 'add' : 'send'), on: { click: () => propose(m, false) } }, host ? 'Dodaj' : 'Zaproponuj'))))));
+    } else {
+      w.append(el('p', { class: 'muted', style: 'margin:14px 4px' }, host ? 'Jako host dodajesz utwory od razu.' : 'Host zatwierdzi Twoją propozycję, zanim trafi do kolejki.'));
+    }
+    if (!host) {
+      w.append(el('h2', {}, 'Moje propozycje'));
+      w.append(mine.length ? el('div', { class: 'list' }, mine.map((p) => trackItem(p, 'czeka na akceptację'))) : el('p', { class: 'muted' }, 'Nic nie czeka na akceptację.'));
+      w.append(el('div', { style: 'margin-top:18px' },
+        state.me.hostRequested ? el('p', { class: 'muted' }, 'Prośba o uprawnienia hosta czeka na akceptację.')
+          : btn('star', 'Poproś o uprawnienia hosta', async () => { await act('/api/hostrequest', {}, 'Wysłano prośbę do hosta'); })));
+    }
+    return w;
+  }
+
+  // ---- host panels
+  function proposalsView() {
+    const p = state.proposals;
+    if (!p.length) return empty('Brak propozycji', 'Gdy ktoś zaproponuje utwór, zobaczysz go tutaj.');
+    return el('div', { class: 'list' }, p.map((x) => trackItem(x, x.by + ' · ' + (x.channel || ''), el('div', { class: 'acts' },
+      btn('close', 'Odrzuć', () => act('/api/proposals/' + x.id + '/reject'), 'sm'),
+      btn('check', 'Zatwierdź', () => act('/api/proposals/' + x.id + '/approve'), 'primary sm')))));
+  }
+
+  function guestsView() {
+    const g = state.guests;
+    if (!g.length) return empty('Nikt jeszcze nie dołączył', 'Pokaż gościom kod QR z aplikacji.');
+    return el('div', { class: 'list' }, g.map((x) => el('div', { class: 'item guest' },
+      el('span', { class: 'dot' + (x.online ? ' on' : '') }),
+      el('div', { class: 'meta' }, el('div', { class: 't' }, x.name), el('div', { class: 's' }, x.role === 'HOST' ? 'Współhost' : x.hostRequested ? 'Prosi o uprawnienia hosta' : 'Gość')),
+      el('div', { class: 'acts' },
+        x.hostRequested ? [btn('close', 'Odrzuć', () => act('/api/guests/' + x.id + '/reject'), 'sm'), btn('check', 'Zatwierdź', () => act('/api/guests/' + x.id + '/approve'), 'primary sm')] : null,
+        x.role === 'HOST' && x.id !== state.me.id ? btn('', 'Odbierz host', () => act('/api/guests/' + x.id + '/demote'), 'sm') : null,
+        x.id !== state.me.id ? btn('trash', 'Usuń', () => confirm('Usunąć ' + x.name + '?') && act('/api/guests/' + x.id + '/kick'), 'danger sm') : null))));
+  }
+
+  function playlistView() {
+    const w = el('div', { class: 'card' });
+    w.append(el('p', { class: 'muted', style: 'margin-top:0' }, 'Wczytanie playlisty zastępuje utwory z poprzedniej playlisty. Zatwierdzone propozycje zostają. Utwory trafiają do kolejki w kolejności z YouTube.'));
+    const url = el('input', { id: 'plUrl', type: 'text', placeholder: 'Link do publicznej playlisty YouTube', autocomplete: 'off', 'aria-label': 'Link do playlisty' });
+    const shuffle = el('input', { id: 'plShuffle', type: 'checkbox' });
+    const go = btn('link', 'Wczytaj playlistę', async () => {
+      go.disabled = true;
+      try { await api('/api/playlist', { url: url.value, shuffle: shuffle.checked }); toast('Playlista wczytana'); } catch (e) { toast(e.message); }
+      go.disabled = false;
+    }, 'primary');
+    url.addEventListener('keydown', (e) => { if (e.key === 'Enter') go.click(); });
+    w.append(url, el('div', { class: 'head', style: 'margin:12px 0 0' }, el('label', { class: 'sw' }, shuffle, 'Losowa kolejność'), el('span', { style: 'flex:1' }), go));
+    return w;
+  }
+
+  // ------------------------------------------------------------------ host controls
   $('bToggle').onclick = () => act('/api/player/toggle');
   $('bNext').onclick = () => act('/api/player/next');
   $('bPrev').onclick = () => act('/api/player/prev');
+  $('bRepeat').onclick = () => act('/api/player/repeat', { on: !state.repeat });
+  $('npTrack').addEventListener('click', (e) => {
+    if (!isHost() || !state || !state.now.dur) return;
+    const r = e.currentTarget.getBoundingClientRect();
+    act('/api/player/seek', { ms: Math.round(state.now.dur * Math.min(1, Math.max(0, (e.clientX - r.left) / r.width))) });
+  });
 
-  if (token) start().then(() => { if (!state) logout(); }); else logout();
-  if (token === '' && !secret) $('joinErr').textContent = 'Zeskanuj kod QR od hosta, żeby dołączyć.';
+  // ------------------------------------------------------------------ keyboard
+  const SHORTCUTS = [
+    ['/', 'Szukaj utworu', false], ['1 – 5', 'Przełącz zakładki', false], ['D', 'Zmień motyw', false], ['?', 'Pokaż tę pomoc', false],
+    ['Spacja', 'Odtwarzaj / pauza', true], ['N', 'Następny utwór', true], ['P', 'Poprzedni utwór', true], ['R', 'Powtarzanie kolejki', true],
+    ['↑ ↓  lub  J K', 'Zaznacz utwór w kolejce', true], ['Enter', 'Graj zaznaczony teraz', true], ['T', 'Zaznaczony na górę kolejki', true],
+    ['Alt + ↑ / ↓', 'Przesuń zaznaczony wyżej / niżej', true], ['Delete', 'Usuń zaznaczony', true], ['Esc', 'Zamknij okno / odznacz', false],
+  ];
+  function openHelp() {
+    const host = isHost();
+    $('keys').replaceChildren(...SHORTCUTS.filter((s) => host || !s[2]).flatMap(([k, d]) =>
+      [el('span', {}, ...k.split('  ').map((p, i) => i % 2 ? ' ' + p + ' ' : el('kbd', {}, p))), el('span', {}, d)]));
+    $('help').showModal();
+  }
+  $('helpBtn').onclick = openHelp;
+
+  function moveSel(delta) {
+    const q = state.queue; if (!q.length) return;
+    let i = q.findIndex((t) => t.uid === selected);
+    i = i < 0 ? (delta > 0 ? 0 : q.length - 1) : Math.min(q.length - 1, Math.max(0, i + delta));
+    selected = q[i].uid; sigs.panel = null; render();
+    const n = document.querySelector('#qlist .item.sel'); if (n) n.scrollIntoView({ block: 'nearest' });
+  }
+
+  document.addEventListener('keydown', (e) => {
+    if (!state || e.ctrlKey && e.key !== 'k' || e.metaKey && e.key !== 'k') return;
+    const typing = /^(INPUT|TEXTAREA|SELECT)$/.test((e.target.tagName || '')) || e.target.isContentEditable;
+    const key = e.key;
+    if (key === 'Escape') { if (typing) e.target.blur(); else if (selected) { selected = null; sigs.panel = null; render(); } return; }
+    if (e.key === 'k' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); setTab('search'); $('q') && $('q').focus(); return; }
+    if (typing || $('help').open || e.target.tagName === 'BUTTON' && (key === ' ' || key === 'Enter')) return;
+    const host = isHost();
+    const tabs = tabsFor();
+    if (/^[1-5]$/.test(key) && tabs[+key - 1]) { setTab(tabs[+key - 1][0]); return; }
+    if (key === '/') { e.preventDefault(); setTab('search'); setTimeout(() => $('q') && $('q').focus(), 40); return; }
+    if (key === '?') { openHelp(); return; }
+    if (key === 'd' || key === 'D') { cycleTheme(); return; }
+    if (!host) return;
+    const sel = selected && state.queue.some((t) => t.uid === selected) ? selected : null;
+    const arrow = key === 'ArrowDown' ? 1 : key === 'ArrowUp' ? -1 : key === 'j' ? 1 : key === 'k' ? -1 : 0;
+    if (arrow && tab === 'queue') {
+      e.preventDefault();
+      if (e.altKey && sel) act('/api/queue/' + sel + '/move', { delta: arrow }); else moveSel(arrow);
+      return;
+    }
+    switch (key) {
+      case ' ': case 'MediaPlayPause': e.preventDefault(); act('/api/player/toggle'); break;
+      case 'n': case 'N': case 'MediaTrackNext': act('/api/player/next'); break;
+      case 'p': case 'P': case 'MediaTrackPrevious': act('/api/player/prev'); break;
+      case 'r': case 'R': act('/api/player/repeat', { on: !state.repeat }); break;
+      case 'Enter': if (sel && tab === 'queue') { e.preventDefault(); act('/api/queue/' + sel + '/playnow'); } break;
+      case 't': case 'T': if (sel) act('/api/queue/' + sel + '/top'); break;
+      case 'Delete': case 'Backspace': if (sel && tab === 'queue') { e.preventDefault(); act('/api/queue/' + sel + '/remove'); selected = null; } break;
+    }
+  });
+
+  // ------------------------------------------------------------------ start
+  applyTheme();
+  if (token) start().then(() => { if (!state) showJoin(); }); else showJoin();
 })();
 </script>
 </body>

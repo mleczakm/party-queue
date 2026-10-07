@@ -38,7 +38,7 @@ class PartyServerTest {
         }
 
     private suspend fun ApplicationTestBuilder.join(name: String = "Ola"): JSONObject {
-        val r = client.post("/api/join") { setBody("""{"name":"$name","secret":"${party.state.value.joinSecret}"}""") }
+        val r = client.post("/api/join") { setBody("""{"name":"$name"}""") }
         assertEquals(HttpStatusCode.OK, r.status)
         return JSONObject(r.bodyAsText())
     }
@@ -57,15 +57,14 @@ class PartyServerTest {
     }
 
     @Test
-    fun `joining needs the right secret and closes on demand`() = server {
-        val bad = client.post("/api/join") { setBody("""{"name":"Ola","secret":"nope"}""") }
-        assertEquals(HttpStatusCode.Forbidden, bad.status)
-        party.setJoinOpen(false)
-        val closed = client.post("/api/join") { setBody("""{"name":"Ola","secret":"${party.state.value.joinSecret}"}""") }
-        assertEquals(HttpStatusCode.Forbidden, closed.status)
-        party.setJoinOpen(true)
+    fun `anyone who opens the page can join, until joining is closed`() = server {
         val token = join()["token"] as String
         assertEquals(HttpStatusCode.OK, call("/api/state", token).status)
+        party.setJoinOpen(false)
+        val closed = client.post("/api/join") { setBody("""{"name":"Late"}""") }
+        assertEquals(HttpStatusCode.Forbidden, closed.status)
+        party.setJoinOpen(true)
+        assertEquals(HttpStatusCode.OK, client.post("/api/join") { setBody("""{"name":"Late"}""") }.status)
     }
 
     @Test
@@ -115,6 +114,28 @@ class PartyServerTest {
         call("/api/hostrequest", other["token"] as String)
         assertEquals(HttpStatusCode.OK, call("/api/guests/${other["id"]}/approve", token).status)
         assertEquals(HttpStatusCode.OK, call("/api/player/next", other["token"] as String).status)
+    }
+
+    @Test
+    fun `a host can move a song to the top, a guest cannot`() = server {
+        val guest = join()["token"] as String
+        listOf(1, 2, 3).forEach { party.enqueue(meta(it), "Host", Source.HOST) } // 1 plays, 2 and 3 wait
+        val last = party.state.value.queue.last().uid
+        assertEquals(HttpStatusCode.Forbidden, call("/api/queue/$last/top", guest).status)
+        assertEquals(HttpStatusCode.OK, call("/api/queue/$last/top", party.hostGuest.token).status)
+        assertEquals(last, party.state.value.queue.first().uid)
+    }
+
+    @Test
+    fun `a host can move a song by several places and switch repeat`() = server {
+        val guest = join()["token"] as String
+        listOf(1, 2, 3, 4).forEach { party.enqueue(meta(it), "Host", Source.HOST) } // 1 plays, 2..4 wait
+        val first = party.state.value.queue.first().uid
+        assertEquals(HttpStatusCode.Forbidden, call("/api/queue/$first/move", guest, """{"delta":2}""").status)
+        assertEquals(HttpStatusCode.OK, call("/api/queue/$first/move", party.hostGuest.token, """{"delta":2}""").status)
+        assertEquals(first, party.state.value.queue.last().uid)
+        assertEquals(HttpStatusCode.OK, call("/api/player/repeat", party.hostGuest.token, """{"on":true}""").status)
+        assertEquals(true, party.state.value.repeat)
     }
 
     @Test

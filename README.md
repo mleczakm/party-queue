@@ -1,3 +1,5 @@
+<p align="center"><img src="branding/banner.svg" alt="Party Queue" width="720"></p>
+
 # Party Queue
 
 Android app (Kotlin + Compose) that turns a phone or tablet into a party jukebox:
@@ -5,7 +7,7 @@ Android app (Kotlin + Compose) that turns a phone or tablet into a party jukebox
 - plays YouTube **without ads** in an embedded Firefox engine (GeckoView) with uBlock Origin built in,
 - keeps playing with the screen off (foreground service + "Play YouTube Video In Background" add-on),
 - loads a **public playlist** into a local queue (no Google login, no API key),
-- serves a **guest web page** on the local network; guests scan a QR code, propose songs, the host approves,
+- serves a **guest web page** on the local network; guests open the page (the QR code in the *Zaproś* tab just opens it), propose songs, the host approves,
 - a **YouTube tab** to browse YouTube and set a playlist as the current one (or add a single video) with one tap,
 - gestures on the queue: swipe right to play now, left to remove, hold and drag to reorder; one tap clears it,
 - guests can ask for host rights; a co-host has the same powers as the host (including approving other co-hosts).
@@ -62,13 +64,14 @@ must be bumped whenever its scripts change, otherwise GeckoView keeps the old co
 - Autoplay is allowed through the session `PermissionDelegate` (Gecko prefs alone were not enough).
 - The mobile YouTube site loads nothing until its play button is pressed; the bridge presses it.
 - The bridge rejects the YouTube cookie banner ("reject all") automatically.
-- The HTTP server has no TLS: use it on a network you trust. Guests authenticate with a random token
-  obtained by joining with the QR code's secret; the host can close joining or rotate the secret.
+- The HTTP server has no TLS: use it on a network you trust. Anyone who opens the page and gives a name is
+  a guest (they get a random token); the host can close joining and still approves every proposal.
 - Some routers isolate Wi-Fi clients; use the host phone's hotspot in that case.
 
 ## Your own playlists
 
-Public and unlisted playlists: paste the link (*Dodaj* tab) or open it in the *YouTube* tab and press *Importuj playlistę*.
+Public and unlisted playlists: paste the link (*YouTube* tab → *Wklej link*) or open it in the *YouTube* tab and press *Ustaw jako aktualną playlistę*.
+Playlists keep the order they have on YouTube (shuffling is an explicit switch).
 Private playlists: sign in via *Zaloguj się* in the YouTube tab and import from there (experimental). The simplest
 workaround is to set the playlist to *Unlisted* on YouTube. The first ~100 videos of a playlist are imported.
 
