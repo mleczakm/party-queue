@@ -223,7 +223,8 @@ class PartyController(
     /** Import from a playlist page the host's own browser loaded (also works for private lists after signing in). */
     fun importPlaylistData(url: String, data: String, shuffleIt: Boolean) {
         val json = try { JSONObject(data) } catch (e: Exception) { throw PartyException("Nie udało się odczytać playlisty ze strony") }
-        val videos = YouTubeParser.extractVideos(json)
+        // A watch page (Mix, or a playlist opened from a video) lists its songs in the "up next" panel.
+        val videos = YouTubeParser.extractPlaylistPanel(json).ifEmpty { YouTubeParser.extractVideos(json) }
         if (videos.isEmpty()) throw PartyException("Na tej stronie nie ma żadnych utworów do zaimportowania")
         applyPlaylist(YouTubeParser.playlistTitle(json) ?: "Playlista", videos, url, shuffleIt)
     }
@@ -239,6 +240,13 @@ class PartyController(
         }
         persist()
         if (_state.value.current == null) next()
+    }
+
+    /** Empties the queue and forgets the playlist, so "repeat" cannot refill it. The song that is playing carries on. */
+    fun clearQueue() {
+        playlistTracks = emptyList()
+        _state.update { it.copy(queue = emptyList(), playlistTitle = null, playlistUrl = "") }
+        persist()
     }
 
     fun setRepeat(on: Boolean) {

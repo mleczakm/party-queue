@@ -6,7 +6,8 @@ Android app (Kotlin + Compose) that turns a phone or tablet into a party jukebox
 - keeps playing with the screen off (foreground service + "Play YouTube Video In Background" add-on),
 - loads a **public playlist** into a local queue (no Google login, no API key),
 - serves a **guest web page** on the local network; guests scan a QR code, propose songs, the host approves,
-- a **YouTube tab** to browse YouTube and import a playlist or a single video with one tap,
+- a **YouTube tab** to browse YouTube and set a playlist as the current one (or add a single video) with one tap,
+- swipe gestures on the queue: right plays now, left removes; one tap clears it,
 - guests can ask for host rights; a co-host has the same powers as the host (including approving other co-hosts).
 
 The queue is local to the app. Nothing is written back to YouTube.

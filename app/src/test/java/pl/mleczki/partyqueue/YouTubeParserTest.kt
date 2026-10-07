@@ -46,6 +46,18 @@ class YouTubeParserTest {
     }
 
     @Test
+    fun `reads only the up-next panel of a watch page, not the recommendations`() {
+        val data = json("""{"watch":{"playlist":{"playlistPanelRenderer":{"title":"Mix - Some Song","contents":[
+            {"playlistPanelVideoRenderer":{"videoId":"mmmmmmmmmm1","title":{"simpleText":"Mix one"},"shortBylineText":{"runs":[{"text":"A"}]},"lengthText":{"simpleText":"3:00"}}},
+            {"playlistPanelVideoRenderer":{"videoId":"mmmmmmmmmm2","title":{"simpleText":"Mix two"}}}]}}},
+            "related":[{"videoRenderer":{"videoId":"rrrrrrrrrr1","title":{"runs":[{"text":"Recommended"}]}}}]}""")
+        assertEquals(listOf("mmmmmmmmmm1", "mmmmmmmmmm2"), YouTubeParser.extractPlaylistPanel(data).map { it.videoId })
+        assertEquals("Mix one", YouTubeParser.extractPlaylistPanel(data)[0].title)
+        assertEquals("Mix - Some Song", YouTubeParser.playlistTitle(data))
+        assertEquals(0, YouTubeParser.extractPlaylistPanel(json("{}")).size)
+    }
+
+    @Test
     fun `finds the embedded initial data in a page`() {
         val html = """<html><script>var ytInitialData = {"k":{"videoRenderer":{"videoId":"fffffffffff","title":{"runs":[{"text":"T"}]}}}};</script><script>other()</script>"""
         assertEquals(1, YouTubeParser.extractVideos(YouTubeParser.initialData(html)).size)

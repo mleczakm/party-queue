@@ -287,6 +287,32 @@ class PartyControllerTest {
         assertEquals(meta(2).videoId, r.state().current?.videoId)
     }
 
+    @Test
+    fun `clearing the queue keeps the current song and stops repeat from refilling`() = runTest {
+        val r = rig((1..3).map(::meta))
+        r.party.loadPlaylist("any", false) // playing 1, queue 2,3
+        r.party.clearQueue()
+        assertEquals(meta(1).videoId, r.state().current?.videoId)
+        assertTrue(r.state().queue.isEmpty())
+        assertNull(r.state().playlistTitle)
+        r.party.next() // nothing queued and nothing to repeat
+        assertNull(r.state().current)
+    }
+
+    @Test
+    fun `a watch page import uses the up-next panel and ignores recommendations`() = runTest {
+        val r = rig()
+        val page = JSONObject()
+            .put("panel", JSONObject().put("playlistPanelRenderer", JSONObject().put("title", "Mix - X").put("contents", org.json.JSONArray()
+                .put(JSONObject().put("playlistPanelVideoRenderer", JSONObject().put("videoId", "mmmmmmmmmm1").put("title", JSONObject().put("simpleText", "One"))))
+                .put(JSONObject().put("playlistPanelVideoRenderer", JSONObject().put("videoId", "mmmmmmmmmm2").put("title", JSONObject().put("simpleText", "Two")))))))
+            .put("related", JSONObject().put("videoRenderer", JSONObject().put("videoId", "rrrrrrrrrr1").put("title", JSONObject().put("simpleText", "Recommended"))))
+        r.party.importPlaylistData("u", page.toString(), false)
+        assertEquals("mmmmmmmmmm1", r.state().current?.videoId)
+        assertEquals(listOf("mmmmmmmmmm2"), r.state().queue.map { it.videoId })
+        assertEquals("Mix - X", r.state().playlistTitle)
+    }
+
     // ------------------------------------------------------------ importing from a page
 
     private fun pageData(vararg ids: String, title: String = "My list") = JSONObject()

@@ -222,13 +222,20 @@
 
     renderTabs();
 
-    $('tab-queue').replaceChildren(state.queue.length === 0 ? el('p', { class: 'muted' }, 'Kolejka jest pusta.') :
+    const queueView = (state.queue.length === 0 ? el('p', { class: 'muted' }, 'Kolejka jest pusta.') :
       el('div', { class: 'card' }, state.queue.map((t) => item(t, host ? el('div', { class: 'row' },
         btn('▲', () => act('/api/queue/' + t.uid + '/up')), btn('▼', () => act('/api/queue/' + t.uid + '/down')),
         btn('▶', () => act('/api/queue/' + t.uid + '/playnow')), btn('✕', () => act('/api/queue/' + t.uid + '/remove'), 'danger')) : null,
         [t.channel, t.dur, t.src === 'PLAYLIST' ? '' : 'dodał(a) ' + t.by].filter(Boolean).join(' · ')))));
 
     const mine = state.proposals.filter((p) => p.byId === state.me.id);
+    const queueHead = host && state.queue.length
+      ? el('div', { class: 'row', style: 'margin-bottom:8px' },
+          el('span', { class: 'grow muted' }, 'W kolejce: ' + state.queue.length),
+          btn('Wyczyść kolejkę', () => confirm('Wyczyścić całą kolejkę?') && act('/api/queue/clear'), 'danger'))
+      : null;
+    $('tab-queue').replaceChildren(...[queueHead, queueView].filter(Boolean));
+
     $('mine').replaceChildren(...(mine.length === 0
       ? [el('span', { class: 'muted' }, host ? 'Jako host dodajesz utwory od razu.' : 'Nic nie czeka na akceptację.')]
       : mine.map((p) => item(p, null, 'czeka na akceptację'))));

@@ -35,6 +35,10 @@ class PlayerBridge(private val runtime: GeckoRuntime) : PlayerPort {
     private val _browseUrl = MutableStateFlow("")
     val browseUrl: StateFlow<String> = _browseUrl.asStateFlow()
     private var pendingImport: CompletableDeferred<String>? = null
+    private var pendingBrowse: String? = null
+    private val _signedIn = MutableStateFlow(false)
+    /** Whether the browse session is signed in to Google (decided by the page itself). */
+    val signedIn: StateFlow<Boolean> = _signedIn.asStateFlow()
 
     init {
         // Android (or Gecko itself) may kill the content process; bring the current track back.
@@ -90,6 +94,7 @@ class PlayerBridge(private val runtime: GeckoRuntime) : PlayerPort {
         when (m.optString("type")) {
             "log" -> Log.i(TAG, "page(${m.optString("mode")}): ${m.optString("msg")}")
             "playlistData" -> pendingImport?.complete(m.optString("data"))
+            "login" -> if (m.optString("mode") == "browse") _signedIn.value = m.optBoolean("signedIn")
             else -> if (m.optString("mode") == "player") party?.onPlayerMessage(m)
         }
     }
@@ -100,7 +105,8 @@ class PlayerBridge(private val runtime: GeckoRuntime) : PlayerPort {
         val v = pendingVideo
         pendingVideo = null
         if (v != null) load(v) else showIdle()
-        browse?.loadUri(YOUTUBE_HOME)
+        browse?.loadUri(pendingBrowse ?: YOUTUBE_HOME)
+        pendingBrowse = null
     }
 
     /** A calm page instead of an empty grey surface while nothing is playing. */
@@ -156,12 +162,15 @@ class PlayerBridge(private val runtime: GeckoRuntime) : PlayerPort {
             }
         }
         browse = s
-        if (ready) s.loadUri(YOUTUBE_HOME)
+        if (ready) s.loadUri(pendingBrowse ?: YOUTUBE_HOME).also { pendingBrowse = null }
         return s
     }
 
     fun browseTo(url: String) {
-        main.post { browseSession().loadUri(url) }
+        main.post {
+            val session = browseSession()
+            if (ready) session.loadUri(url) else pendingBrowse = url
+        }
     }
 
     /**

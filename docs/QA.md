@@ -49,10 +49,17 @@ Use a real phone, not an emulator. Note the phone model and Android version in t
 - [ ] Press BACK on the host: the app hides, music keeps playing; reopening shows the video, not a blank pane.
 - [ ] Swipe the app away from recents: the notification and playback survive or stop cleanly (note which).
 
+**Queue gestures**
+- [ ] Swipe a row right: the song plays now and leaves the queue. Swipe left: it is removed. A short, slow drag springs back.
+- [ ] Leave the queue alone for ~6 s: the first three rows slide right (green, play icon) then left (red, bin icon).
+- [ ] *Wyczyść kolejkę* asks for confirmation, empties the queue, keeps the current song, and the queue does not refill itself.
+
 **Browsing and importing (YouTube tab)**
 - [ ] The tab shows one YouTube page; the player is not visible as a second window.
-- [ ] Open a public playlist page: *Importuj playlistę* fills the queue and does **not** interrupt the song that is playing.
-- [ ] Open a video page: *Dodaj do kolejki* and *Jako następny* put it in the right place.
+- [ ] Open a public playlist page: only *Ustaw jako aktualną playlistę* (and the shuffle switch) is offered; it fills the queue and does **not** interrupt the song that is playing.
+- [ ] On the home page no import buttons are shown. After signing in, the sign-in button is gone.
+- [ ] Open a Mix (a video opened from a "Mix" chip, URL contains `list=RD...`): the same button imports the songs listed in the mix.
+- [ ] Open a video page (outside a playlist): only *Dodaj do kolejki* and *Jako następny* are offered, and they put it in the right place.
 - [ ] Music keeps playing, without stutter, while you browse, while the queue list is visible, and after switching tabs.
   (Objective check: a pane that is too small makes YouTube pause the video; the position shown under the title must advance
   one second per second.)

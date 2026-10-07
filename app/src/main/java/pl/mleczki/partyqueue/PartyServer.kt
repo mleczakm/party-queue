@@ -134,6 +134,10 @@ fun Application.partyModule(party: PartyController, indexHtml: String) {
             }
         }
 
+        post("/api/queue/clear") {
+            handle(party, call, hostOnly = true) { _, _ -> party.clearQueue(); null }
+        }
+
         post("/api/queue/{uid}/{action}") {
             handle(party, call, hostOnly = true) { _, _ ->
                 val uid = call.parameters["uid"].orEmpty()

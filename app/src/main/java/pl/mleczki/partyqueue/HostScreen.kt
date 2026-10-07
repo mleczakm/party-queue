@@ -1,5 +1,29 @@
 package pl.mleczki.partyqueue
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.offset
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Icon
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.IntOffset
+import kotlinx.coroutines.delay
+import kotlin.math.abs
+import kotlin.math.roundToInt
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -16,6 +40,7 @@ import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Button
@@ -212,24 +237,149 @@ private fun Mini(label: String, onClick: () -> Unit) {
     TextButton(onClick = onClick, contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 8.dp)) { Text(label) }
 }
 
+private val SwipeGreen = Color(0xFF2E7D32)
+private val SwipeRed = Color(0xFFC62828)
+
+/** A row that can be dragged: right plays it now (green), left removes it (red). [hint] > 0 makes it wiggle to show how. */
+@Composable
+private fun SwipeRow(
+    hint: Int,
+    hintIndex: Int,
+    onPlayNow: () -> Unit,
+    onRemove: () -> Unit,
+    content: @Composable () -> Unit,
+) {
+    val offset = remember { Animatable(0f) }
+    var width by remember { mutableFloatStateOf(1f) }
+    val scope = rememberCoroutineScope()
+    val peek = with(LocalDensity.current) { 76.dp.toPx() }
+
+    LaunchedEffect(hint) {
+        if (hint > 0 && hintIndex < 3) {
+            delay(hintIndex * 220L)
+            for (direction in listOf(1f, -1f)) {
+                offset.animateTo(direction * peek, tween(420))
+                delay(260)
+                offset.animateTo(0f, tween(360))
+                delay(120)
+            }
+        }
+    }
+
+    fun settle() = scope.launch {
+        val threshold = width * 0.35f
+        when {
+            offset.value > threshold -> { offset.animateTo(width, tween(160)); onPlayNow() }
+            offset.value < -threshold -> { offset.animateTo(-width, tween(160)); onRemove() }
+            else -> offset.animateTo(0f, tween(220))
+        }
+    }
+
+    val progress = (abs(offset.value) / (width * 0.3f)).coerceIn(0f, 1f)
+    Box(Modifier.fillMaxWidth().onSizeChanged { width = it.width.toFloat() }) {
+        if (offset.value != 0f) {
+            val playing = offset.value > 0
+            Box(
+                Modifier.matchParentSize().background(if (playing) SwipeGreen else SwipeRed).padding(horizontal = 24.dp),
+                contentAlignment = if (playing) Alignment.CenterStart else Alignment.CenterEnd,
+            ) {
+                Icon(
+                    if (playing) Icons.Filled.PlayArrow else Icons.Filled.Delete,
+                    contentDescription = if (playing) "Graj teraz" else "Usuń z kolejki",
+                    tint = Color.White,
+                    modifier = Modifier.size(30.dp).scale(0.8f + 0.4f * progress).alpha(0.45f + 0.55f * progress),
+                )
+            }
+        }
+        Box(
+            Modifier
+                .offset { IntOffset(offset.value.roundToInt(), 0) }
+                .background(MaterialTheme.colorScheme.surface)
+                .pointerInput(Unit) {
+                    detectHorizontalDragGestures(
+                        onDragStart = { scope.launch { offset.stop() } },
+                        onDragEnd = { settle() },
+                        onDragCancel = { scope.launch { offset.animateTo(0f, tween(200)) } },
+                    ) { change, drag ->
+                        change.consume()
+                        scope.launch { offset.snapTo((offset.value + drag).coerceIn(-width, width)) }
+                    }
+                }
+        ) { content() }
+    }
+}
+
+private const val IDLE_HINT_MS = 6_000L
+
 @Composable
 private fun QueueTab(state: State<Snapshot>, party: PartyController) {
     val queue by remember { derivedStateOf { state.value.queue } }
+    var confirmClear by remember { mutableStateOf(false) }
+    var lastTouch by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    var hint by remember { mutableIntStateOf(0) }
+
+    // When nobody touches the list for a while, the first rows slide sideways to show what the gestures do.
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(1_000)
+            val now = System.currentTimeMillis()
+            if (queue.isNotEmpty() && now - lastTouch > IDLE_HINT_MS) {
+                hint++
+                lastTouch = now + 10_000
+            }
+        }
+    }
+
     if (queue.isEmpty()) {
         Text("Kolejka jest pusta.", Modifier.padding(16.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
         return
     }
-    LazyColumn(Modifier.fillMaxSize()) {
-        items(queue, key = { it.uid }) { t ->
-            val sub = listOfNotNull(t.channel.ifBlank { null }, t.duration, if (t.source == Source.PLAYLIST) null else "dodał(a) ${t.addedBy}")
-                .joinToString(" · ")
-            TrackRow(t.title, sub) {
-                Mini("▲") { party.move(t.uid, -1) }
-                Mini("▼") { party.move(t.uid, 1) }
-                Mini("▶") { party.playNow(t.uid) }
-                Mini("✕") { party.remove(t.uid) }
+    Column(
+        Modifier.fillMaxSize().pointerInput(Unit) {
+            awaitPointerEventScope {
+                while (true) {
+                    awaitPointerEvent(PointerEventPass.Initial)
+                    lastTouch = System.currentTimeMillis()
+                }
             }
         }
+    ) {
+        Row(Modifier.fillMaxWidth().padding(start = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text("W kolejce: ${queue.size}", style = MaterialTheme.typography.titleSmall)
+                Text(
+                    "W prawo: graj teraz · w lewo: usuń",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            TextButton(
+                onClick = { confirmClear = true },
+                colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
+            ) { Text("Wyczyść kolejkę") }
+        }
+        HorizontalDivider()
+        LazyColumn(Modifier.weight(1f).fillMaxWidth()) {
+            itemsIndexed(queue, key = { _, t -> t.uid }) { index, t ->
+                val sub = listOfNotNull(t.channel.ifBlank { null }, t.duration, if (t.source == Source.PLAYLIST) null else "dodał(a) ${t.addedBy}")
+                    .joinToString(" · ")
+                SwipeRow(hint, index, onPlayNow = { party.playNow(t.uid) }, onRemove = { party.remove(t.uid) }) {
+                    TrackRow(t.title, sub) {
+                        Mini("▲") { party.move(t.uid, -1) }
+                        Mini("▼") { party.move(t.uid, 1) }
+                    }
+                }
+            }
+        }
+    }
+    if (confirmClear) {
+        AlertDialog(
+            onDismissRequest = { confirmClear = false },
+            title = { Text("Wyczyścić kolejkę?") },
+            text = { Text("Usunie wszystkie utwory z kolejki (${queue.size}). Utwór, który teraz gra, dokończy się.") },
+            confirmButton = { TextButton(onClick = { party.clearQueue(); confirmClear = false }) { Text("Wyczyść") } },
+            dismissButton = { TextButton(onClick = { confirmClear = false }) { Text("Anuluj") } },
+        )
     }
 }
 
@@ -356,7 +506,7 @@ private fun AddTab(state: State<Snapshot>, party: PartyController) {
                 Switch(shuffle, { shuffle = it }); Text(" Losowo", Modifier.padding(end = 12.dp))
                 Switch(repeat, { party.setRepeat(it) }); Text(" Powtarzaj")
             }
-            Button(onClick = { run { party.loadPlaylist(playlistUrl, shuffle) } }, enabled = !busy && playlistUrl.isNotBlank()) { Text("Wczytaj playlistę") }
+            Button(onClick = { run { party.loadPlaylist(playlistUrl, shuffle) } }, enabled = !busy && playlistUrl.isNotBlank()) { Text("Ustaw jako aktualną playlistę") }
             playlistTitle?.let { Text("Wczytano: $it", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
         }
         item {
@@ -379,11 +529,12 @@ private fun AddTab(state: State<Snapshot>, party: PartyController) {
     }
 }
 
-/** A real YouTube page the host can browse; the buttons act on whatever page is showing. */
+/** A real YouTube page the host can browse; the bar below offers only what makes sense for the page showing. */
 @Composable
 private fun BrowseTab(app: PartyApp, party: PartyController) {
     val bridge = app.player
     val url by bridge.browseUrl.collectAsStateWithLifecycle()
+    val signedIn by bridge.signedIn.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
     var shuffle by rememberSaveable { mutableStateOf(true) }
     var busy by remember { mutableStateOf(false) }
@@ -391,6 +542,7 @@ private fun BrowseTab(app: PartyApp, party: PartyController) {
 
     val listId = YouTubeClient.parsePlaylistId(url)
     val videoId = YouTubeClient.parseVideoId(url).takeIf { "/watch" in url || "/shorts/" in url }
+    val isMix = listId?.startsWith("RD") == true
 
     fun work(block: suspend () -> String) {
         scope.launch {
@@ -401,15 +553,21 @@ private fun BrowseTab(app: PartyApp, party: PartyController) {
         }
     }
 
-    fun importPlaylist(id: String) = work {
-        val page = "https://m.youtube.com/playlist?list=$id"
-        try {
-            party.loadPlaylist(page, shuffle)
-        } catch (e: Exception) {
-            // Private or sign-in-only list: read it from the page this browser sees.
-            party.importPlaylistData(page, bridge.scrapePlaylist(page), shuffle)
+    fun setPlaylist(id: String) = work {
+        if (isMix) {
+            // A Mix exists only on a watch page: read the "up next" list from the page that is showing.
+            if ("/watch" !in url) throw PartyException("Otwórz dowolny film z tego miksu, a potem ustaw go jako playlistę")
+            party.importPlaylistData(url, bridge.scrapePlaylist(url), shuffle)
+        } else {
+            val page = "https://m.youtube.com/playlist?list=$id"
+            try {
+                party.loadPlaylist(page, shuffle)
+            } catch (e: Exception) {
+                // Private or sign-in-only list: read it from the page this browser sees.
+                party.importPlaylistData(page, bridge.scrapePlaylist(page), shuffle)
+            }
         }
-        "Zaimportowano „${party.state.value.playlistTitle}”. Kolejka: ${party.state.value.queue.size}."
+        "Aktualna playlista: „${party.state.value.playlistTitle}”. W kolejce: ${party.state.value.queue.size}."
     }
 
     Column(Modifier.fillMaxSize()) {
@@ -419,36 +577,45 @@ private fun BrowseTab(app: PartyApp, party: PartyController) {
             onRelease = { it.releaseSession() },
         )
         Surface(tonalElevation = 3.dp) {
-            Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp)) {
+            Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 if (listId != null) {
-                    Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
-                        Switch(shuffle, { shuffle = it }); Text(" Losowo", Modifier.weight(1f))
-                        Button(onClick = { importPlaylist(listId) }, enabled = !busy) { Text("Importuj playlistę") }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Switch(shuffle, { shuffle = it }); Text(" Losowa kolejność")
+                    }
+                    Button(onClick = { setPlaylist(listId) }, enabled = !busy, modifier = Modifier.fillMaxWidth()) {
+                        Text("Ustaw jako aktualną playlistę")
+                    }
+                    if (isMix) {
+                        Text(
+                            "Mix: trafią do kolejki utwory widoczne teraz w mixie (zwykle ok. 25).",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
                     }
                 }
                 if (videoId != null) {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Button(onClick = {
                             work { party.enqueue(party.yt.meta(videoId), "Host", Source.HOST); "Dodano do kolejki" }
-                        }, enabled = !busy) { Text("Dodaj do kolejki") }
+                        }, enabled = !busy, modifier = Modifier.weight(1f)) { Text("Dodaj do kolejki") }
                         OutlinedButton(onClick = {
                             work { party.enqueue(party.yt.meta(videoId), "Host", Source.HOST, playNext = true); "Zagra jako następny" }
-                        }, enabled = !busy) { Text("Jako następny") }
+                        }, enabled = !busy, modifier = Modifier.weight(1f)) { Text("Jako następny") }
                     }
                 }
                 if (listId == null && videoId == null) {
                     Text(
-                        "Znajdź playlistę lub film. Gdy otworzysz stronę playlisty, pojawi się przycisk importu.",
+                        "Znajdź playlistę lub film. Na stronie playlisty pojawi się przycisk ustawienia jej jako aktualnej.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
                 message?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary) }
-                Row {
-                    TextButton(onClick = { bridge.browseTo("https://m.youtube.com/") }) { Text("Strona główna") }
-                    TextButton(onClick = {
-                        bridge.browseTo("https://accounts.google.com/ServiceLogin?service=youtube&continue=https%3A%2F%2Fm.youtube.com%2F")
-                    }) { Text("Zaloguj się (prywatne playlisty)") }
+                if (!signedIn) {
+                    TextButton(
+                        onClick = { bridge.browseTo("https://accounts.google.com/ServiceLogin?service=youtube&continue=https%3A%2F%2Fm.youtube.com%2F") },
+                        contentPadding = PaddingValues(horizontal = 4.dp),
+                    ) { Text("Zaloguj się, aby dodać prywatne playlisty") }
                 }
             }
         }

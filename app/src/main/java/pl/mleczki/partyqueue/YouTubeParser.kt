@@ -21,10 +21,25 @@ object YouTubeParser {
         walk(data) { key, v ->
             if (v is JSONObject) {
                 if (key == "playlistMetadataRenderer") v.optString("title").takeIf { it.isNotBlank() }?.let(sb::add)
+                if (key == "playlistPanelRenderer") v.optString("title").takeIf { it.isNotBlank() }?.let(sb::add)
                 if (key == "pageHeaderViewModel") (v.path("title", "dynamicTextViewModel", "text", "content") as? String)?.let(sb::add)
             }
         }
         return sb.firstOrNull()
+    }
+
+    /**
+     * The "up next" panel of a watch page. This is the only place an auto-generated Mix (list=RD...) exists,
+     * and it must be read on its own: the rest of a watch page is full of unrelated recommendations.
+     */
+    fun extractPlaylistPanel(data: JSONObject): List<Meta> {
+        val out = LinkedHashMap<String, Meta>()
+        walk(data) { key, v ->
+            if (key == "playlistPanelVideoRenderer" && v is JSONObject) {
+                fromRenderer(v)?.let { out.putIfAbsent(it.videoId, it) }
+            }
+        }
+        return out.values.toList()
     }
 
     fun extractVideos(data: JSONObject): List<Meta> {

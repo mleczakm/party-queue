@@ -7,6 +7,17 @@ git tag `v<version>`.
 
 ## [Unreleased]
 
+### Added
+- Queue gestures: swipe a row right to play it now (green), left to remove it (red); after a few seconds without
+  touching the list the first rows slide sideways to show this. *Wyczyść kolejkę* empties the queue (with confirmation;
+  also for co-hosts on the guest page and via `POST /api/queue/clear`).
+- YouTube tab shows only the buttons that fit the page: *Ustaw jako aktualną playlistę* on playlist pages,
+  *Dodaj do kolejki* / *Jako następny* on videos. The sign-in button disappears once you are signed in.
+- Auto-generated YouTube Mixes can be imported from a video page (their songs are read from the page's "up next" list).
+
+### Changed
+- "Wczytaj playlistę" is now called *Ustaw jako aktualną playlistę*; the "home" button is gone.
+
 ## [0.1.0] - 2026-10-07
 
 First public version.

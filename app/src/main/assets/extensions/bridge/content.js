@@ -44,6 +44,20 @@
       document.querySelectorAll("video").forEach((v) => { if (!v.paused) { v.muted = true; v.pause(); } });
     }, 700);
 
+    // Tell the app whether the host is signed in (it hides the "sign in" button afterwards).
+    let lastLogin = null;
+    setInterval(() => {
+      let signedIn = false;
+      try {
+        const cfg = window.wrappedJSObject.ytcfg;
+        signedIn = !!(cfg && (cfg.get ? cfg.get("LOGGED_IN") : cfg.data_ && cfg.data_.LOGGED_IN));
+      } catch (e) { /* page not ready */ }
+      if (signedIn !== lastLogin) {
+        lastLogin = signedIn;
+        send({ type: "login", signedIn });
+      }
+    }, 1500);
+
     // The app reloads a playlist page with ?pqimport=1 to read it: ytInitialData is only fresh on a real load.
     if (params.has("pqimport")) {
       let tries = 0;

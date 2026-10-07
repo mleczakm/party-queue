@@ -118,6 +118,16 @@ class PartyServerTest {
     }
 
     @Test
+    fun `only hosts can clear the queue`() = server {
+        val guest = join()["token"] as String
+        party.enqueue(meta(1), "Host", Source.HOST); party.enqueue(meta(2), "Host", Source.HOST); party.enqueue(meta(3), "Host", Source.HOST)
+        assertEquals(HttpStatusCode.Forbidden, call("/api/queue/clear", guest).status)
+        assertEquals(2, party.state.value.queue.size)
+        assertEquals(HttpStatusCode.OK, call("/api/queue/clear", party.hostGuest.token).status)
+        assertEquals(0, party.state.value.queue.size)
+    }
+
+    @Test
     fun `a kicked guest loses access immediately`() = server {
         val guest = join()
         val token = guest["token"] as String
