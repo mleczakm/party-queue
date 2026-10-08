@@ -1,6 +1,9 @@
 package pl.mleczki.partyqueue
 
+import android.content.BroadcastReceiver
 import android.content.ClipData
+import android.content.IntentFilter
+import android.media.AudioManager
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
@@ -75,11 +78,14 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
 import androidx.compose.runtime.derivedStateOf
@@ -122,6 +128,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.zIndex
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
@@ -158,7 +165,7 @@ private fun toast(ctx: Context, text: String) = Toast.makeText(ctx, text, Toast.
 // =====================================================================================================================
 
 @Composable
-fun HostApp(app: PartyApp, themeMode: ThemeMode, initialTab: Int = 0) {
+fun HostApp(app: PartyApp, themeMode: ThemeMode, initialTab: Int = 0, initialPreview: Int = 0) {
     val party = app.party
     // The snapshot changes every second (playback position). Only [NowPlaying] may read it directly;
     // everything else reads a slice through derivedStateOf so it recomposes only when its slice changes.
@@ -169,7 +176,7 @@ fun HostApp(app: PartyApp, themeMode: ThemeMode, initialTab: Int = 0) {
     val requestCount by remember { derivedStateOf { state.value.guests.count { it.hostRequested } } }
     val visible by app.player.visibleSession.collectAsStateWithLifecycle()
     // The song's video is rarely needed at a party: hidden until the host asks for it.
-    var preview by rememberSaveable { mutableStateOf(Preview.Hidden) }
+    var preview by rememberSaveable { mutableStateOf(Preview.entries[initialPreview.coerceIn(0, 2)]) }
     var tab by rememberSaveable { mutableIntStateOf(initialTab) }
     val full = preview == Preview.Full
 
@@ -454,7 +461,52 @@ private fun NowPlaying(state: State<Snapshot>, party: PartyController, preview: 
                 // One button, three states: no preview (crossed-out screen), small preview, full screen.
                 RoundButton(onClick = { setPreview(preview.next()) }, size = 42.dp) { ScreenGlyph(Color.White, preview) }
             }
+            Spacer(Modifier.height(2.dp))
+            VolumeControl()
         }
+    }
+}
+
+/** The phone's media volume (the same one the volume keys change); follows the keys too. */
+@Composable
+private fun VolumeControl() {
+    val ctx = LocalContext.current
+    val audio = remember { ctx.getSystemService(AudioManager::class.java) }
+    val max = remember { audio.getStreamMaxVolume(AudioManager.STREAM_MUSIC).coerceAtLeast(1) }
+    var level by remember { mutableIntStateOf(audio.getStreamVolume(AudioManager.STREAM_MUSIC)) }
+    var beforeMute by remember { mutableIntStateOf(max / 2) }
+    LifecycleResumeEffect(Unit) { level = audio.getStreamVolume(AudioManager.STREAM_MUSIC); onPauseOrDispose { } }
+    DisposableEffect(Unit) {
+        val receiver = object : BroadcastReceiver() {
+            override fun onReceive(context: Context, intent: Intent) {
+                level = audio.getStreamVolume(AudioManager.STREAM_MUSIC)
+            }
+        }
+        ContextCompat.registerReceiver(ctx, receiver, IntentFilter("android.media.VOLUME_CHANGED_ACTION"), ContextCompat.RECEIVER_NOT_EXPORTED)
+        onDispose { ctx.unregisterReceiver(receiver) }
+    }
+    fun set(v: Int) {
+        level = v.coerceIn(0, max)
+        runCatching { audio.setStreamVolume(AudioManager.STREAM_MUSIC, level, 0) }
+    }
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        // Tap the speaker to mute, and again to get the old volume back.
+        RoundButton(
+            onClick = { if (level > 0) { beforeMute = level; set(0) } else set(beforeMute.coerceAtLeast(1)) },
+            size = 34.dp,
+        ) { VolumeGlyph(Color.White, level.toFloat() / max) }
+        Slider(
+            value = level.toFloat(),
+            onValueChange = { set(it.roundToInt()) },
+            valueRange = 0f..max.toFloat(),
+            modifier = Modifier.weight(1f).height(36.dp).padding(start = 6.dp),
+            colors = SliderDefaults.colors(
+                thumbColor = Color.White,
+                activeTrackColor = Color.White,
+                inactiveTrackColor = Color.White.copy(alpha = 0.28f),
+            ),
+        )
+        Text("${(level * 100f / max).roundToInt()}%", color = Color.White.copy(alpha = 0.9f), fontSize = 11.sp, modifier = Modifier.width(34.dp), textAlign = TextAlign.End)
     }
 }
 

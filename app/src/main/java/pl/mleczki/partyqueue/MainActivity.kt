@@ -33,6 +33,7 @@ class MainActivity : ComponentActivity() {
         // Debug builds only: lets scripts open a tab or a page without tapping (see docs/QA.md).
         val debuggable = applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE != 0
         val initialTab = if (debuggable) intent.getIntExtra("tab", 0) else 0
+        val initialPreview = if (debuggable) intent.getIntExtra("preview", 0) else 0
         if (debuggable) intent.getStringExtra("browse")?.let { app.player.browseTo(it) }
         setContent {
             val mode by app.themeMode.collectAsStateWithLifecycle()
@@ -46,7 +47,7 @@ class MainActivity : ComponentActivity() {
                         else SystemBarStyle.light(android.graphics.Color.TRANSPARENT, android.graphics.Color.TRANSPARENT),
                     )
                 }
-                HostApp(app, mode, initialTab)
+                HostApp(app, mode, initialTab, initialPreview)
             }
         }
         notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)

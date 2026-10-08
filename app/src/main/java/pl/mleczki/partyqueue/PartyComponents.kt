@@ -276,6 +276,28 @@ fun ScreenGlyph(color: Color, state: Any, size: Dp = 24.dp) = Canvas(Modifier.si
     }
 }
 
+/** A speaker with up to two waves for [level] 0..1; a slash when muted. */
+@Composable
+fun VolumeGlyph(color: Color, level: Float, size: Dp = 20.dp) = Canvas(Modifier.size(size)) {
+    val w = this.size.width
+    val h = this.size.height
+    val stroke = w * 0.09f
+    val body = Path().apply {
+        moveTo(w * 0.08f, h * 0.38f); lineTo(w * 0.28f, h * 0.38f); lineTo(w * 0.5f, h * 0.2f)
+        lineTo(w * 0.5f, h * 0.8f); lineTo(w * 0.28f, h * 0.62f); lineTo(w * 0.08f, h * 0.62f); close()
+    }
+    drawPath(body, color)
+    if (level <= 0f) {
+        drawLine(color, Offset(w * 0.62f, h * 0.38f), Offset(w * 0.92f, h * 0.62f), stroke, StrokeCap.Round)
+        drawLine(color, Offset(w * 0.92f, h * 0.38f), Offset(w * 0.62f, h * 0.62f), stroke, StrokeCap.Round)
+    } else {
+        drawArc(color, -45f, 90f, false, Offset(w * 0.34f, h * 0.3f), Size(w * 0.4f, h * 0.4f), style = Stroke(stroke, cap = StrokeCap.Round))
+        if (level > 0.45f) {
+            drawArc(color, -50f, 100f, false, Offset(w * 0.22f, h * 0.14f), Size(w * 0.64f, h * 0.72f), style = Stroke(stroke, cap = StrokeCap.Round))
+        }
+    }
+}
+
 // ------------------------------------------------------------------ surfaces
 
 /** A card whose gradient slowly drifts: the "now playing" panel. [t] is read in the draw phase only. */

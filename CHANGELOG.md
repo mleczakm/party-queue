@@ -8,6 +8,7 @@ git tag `v<version>`.
 ## [Unreleased]
 
 ### Added
+- Volume slider (the phone's media volume, follows the volume keys; tap the speaker to mute) in the now-playing card.
 - Changing a song by hand (next, previous, play now / swipe right, or a guest co-host pressing next) fades the old song
   out (2 s) while the next one fades in, once the next one is loaded; a song that simply ends still switches instantly.
 - The preview of the playing video is one icon button (crossed-out screen / screen / full screen) and is hidden by default.
@@ -34,6 +35,7 @@ git tag `v<version>`.
 - Auto-generated YouTube Mixes can be imported from a video page (their songs are read from the page's "up next" list).
 
 ### Fixed
+- Some headings were drawn black on the dark background.
 - The guest page did not work (it needed a one-time code from the QR link).
 - The next song did not start (or started half a minute late) while the screen was off: the player page now has high
   priority so Android no longer slows or kills it, songs are loaded inside the running page instead of reloading it,

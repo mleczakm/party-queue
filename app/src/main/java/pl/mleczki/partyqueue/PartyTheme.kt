@@ -2,6 +2,7 @@ package pl.mleczki.partyqueue
 
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Shapes
 import androidx.compose.material3.Typography
@@ -134,7 +135,9 @@ fun PartyTheme(mode: ThemeMode = ThemeMode.AUTO, content: @Composable () -> Unit
             colorScheme = if (dark) DarkColors else LightColors,
             typography = PartyTypography,
             shapes = PartyShapes,
-            content = content,
-        )
+        ) {
+            // Text outside a Surface would otherwise be black, which vanishes on the dark background.
+            CompositionLocalProvider(LocalContentColor provides MaterialTheme.colorScheme.onBackground, content = content)
+        }
     }
 }

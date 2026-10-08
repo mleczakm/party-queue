@@ -22,7 +22,7 @@ changes its page layout, capture the new JSON shape as a fixture in `YouTubePars
 
 ## 2. Device smoke test (before merging anything that touches the app's runtime behaviour)
 
-Install a debug build on a phone, start the app, then (debug builds also accept `--ei tab <0-3> --es browse <url>` extras on the launch intent, handy for scripted UI checks):
+Install a debug build on a phone, start the app, then (debug builds also accept `--ei tab <0-3> --ei preview <0-2> --es browse <url>` extras on the launch intent, handy for scripted UI checks):
 
 ```bash
 scripts/smoke-test.sh <phone-ip> [adb-serial]
@@ -56,6 +56,9 @@ Use a real phone, not an emulator. Note the phone model and Android version in t
 - [ ] A guest phone can still propose a song and see the queue while the host screen is off.
 - [ ] Press BACK on the host: the app hides, music keeps playing; reopening shows the video, not a blank pane.
 - [ ] Swipe the app away from recents: the notification and playback survive or stop cleanly (note which).
+
+**Volume**
+- [ ] The slider under the controls changes the media volume and follows the phone's volume keys; tapping the speaker mutes and restores.
 
 **Fading**
 - [ ] Press ⏭ while a song plays: the old song fades out over ~2 s as the next one fades in (no gap, no jump in loudness).
