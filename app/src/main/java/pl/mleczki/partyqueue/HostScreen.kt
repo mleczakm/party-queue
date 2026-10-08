@@ -941,7 +941,7 @@ private fun InviteTab(state: State<Snapshot>, party: PartyController, port: Int)
                     Spacer(Modifier.height(10.dp))
                     Text(url, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
                     Text(
-                        "Kod QR po prostu otwiera tę stronę. Goście muszą być w tej samej sieci Wi-Fi.",
+                        "Goście muszą być w tej samej sieci Wi-Fi.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = TextAlign.Center,
