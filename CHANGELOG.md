@@ -7,6 +7,8 @@ git tag `v<version>`.
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-10-08
+
 ### Added
 - The host can promote any guest to co-host right away (*Nadaj uprawnienia hosta* in the app, *Mianuj hostem* on the web page);
   the guest's page reloads itself into host mode (and again if the rights are taken away).
@@ -81,5 +83,6 @@ First public version.
   pause itself; the app's own pause button still works. The bridge also acts only on the page's main `<video>`
   element instead of any spare one.
 
-[Unreleased]: https://github.com/mleczakm/party-queue/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/mleczakm/party-queue/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/mleczakm/party-queue/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/mleczakm/party-queue/releases/tag/v0.1.0
