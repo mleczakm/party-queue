@@ -43,6 +43,7 @@ git tag `v<version>`.
 - Auto-generated YouTube Mixes can be imported from a video page (their songs are read from the page's "up next" list).
 
 ### Fixed
+- The guest page on a computer no longer jumps sideways when switching between a long and a short tab (the scrollbar's space is always reserved).
 - Some headings were drawn black on the dark background.
 - The guest page did not work (it needed a one-time code from the QR link).
 - The next song did not start (or started half a minute late) while the screen was off: the player page now has high

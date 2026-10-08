@@ -20,7 +20,8 @@
   }
   * { box-sizing:border-box; }
   [hidden] { display:none !important; }
-  html { color-scheme: dark; }
+  /* The page must not jump sideways when a tab is short and the scrollbar goes away. */
+  html { color-scheme: dark; overflow-y: scroll; scrollbar-gutter: stable; }
   :root[data-theme=light] { color-scheme: light; }
   body { margin:0; min-height:100vh; background:var(--bg); color:var(--text);
          font:15px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; -webkit-tap-highlight-color:transparent; }
@@ -88,6 +89,7 @@
   .badge { min-width:19px; height:19px; padding:0 5px; border-radius:99px; background:var(--pink); color:#fff; font-size:11px; font-weight:800; display:inline-grid; place-items:center; }
   kbd { font:600 11px ui-monospace,SFMono-Regular,Menlo,monospace; padding:1px 6px; border-radius:6px; border:1px solid var(--line); border-bottom-width:2px; background:var(--card2); color:var(--muted); white-space:nowrap; }
   .tab kbd { opacity:.7; } @media (hover:none), (max-width:899px) { .tab kbd, .kbdonly { display:none; } }
+  #panel { min-height: 60vh; }
   .panel { animation:rise .25s ease both; }
   @keyframes rise { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:none; } }
 
