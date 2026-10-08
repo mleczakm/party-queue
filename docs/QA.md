@@ -101,6 +101,7 @@ Use a real phone, not an emulator. Note the phone model and Android version in t
 - [ ] Approved songs play before the rest of the playlist, in the order they were approved.
 - [ ] *Poproś o uprawnienia hosta* → the host approves → the guest sees the host controls and can approve others.
 - [ ] *Przyjmuj nowych gości* off blocks new joins; existing guests stay connected.
+- [ ] *Nadaj uprawnienia hosta* (app) / *Mianuj hostem* (web) promotes a guest who did not ask; their page reloads with the host controls. *Odbierz host* reloads it back.
 - [ ] A removed guest is logged out at once.
 
 **Interface**

@@ -8,6 +8,8 @@ git tag `v<version>`.
 ## [Unreleased]
 
 ### Added
+- The host can promote any guest to co-host right away (*Nadaj uprawnienia hosta* in the app, *Mianuj hostem* on the web page);
+  the guest's page reloads itself into host mode (and again if the rights are taken away).
 - Volume slider (the phone's media volume, follows the volume keys; tap the speaker to mute) in the now-playing card.
 - Changing a song by hand (next, previous, play now / swipe right, or a guest co-host pressing next) fades the old song
   out (2 s) while the next one fades in, once the next one is loaded; a song that simply ends still switches instantly.

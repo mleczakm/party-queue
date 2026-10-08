@@ -1023,6 +1023,8 @@ private fun InviteTab(state: State<Snapshot>, party: PartyController, port: Int)
                             GradientButton("Zatwierdź", { party.approveHost(g.id) })
                             OutlinedButton(onClick = { party.rejectHost(g.id) }) { Text("Odrzuć") }
                         }
+                        // The host can promote anyone straight away; the guest's page switches to host mode by itself.
+                        if (g.role == Role.GUEST && !g.hostRequested) OutlinedButton(onClick = { party.approveHost(g.id) }) { Text("Nadaj uprawnienia hosta") }
                         if (g.role == Role.HOST) OutlinedButton(onClick = { party.demote(g.id) }) { Text("Odbierz host") }
                         TextButton(onClick = { party.kick(g.id) }, colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)) { Text("Usuń") }
                     }

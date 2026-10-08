@@ -275,7 +275,7 @@
 
   // ------------------------------------------------------------------ session
   let token = store.get('pq_token');
-  let state = null, ws = null, retry = 0, tab = 'queue', results = [], searching = false, selected = null, dragUid = null;
+  let lastRole = '', state = null, ws = null, retry = 0, tab = 'queue', results = [], searching = false, selected = null, dragUid = null;
 
   async function api(path, body, method) {
     const r = await fetch(path, {
@@ -359,6 +359,12 @@
 
   function render() {
     if (!state) return;
+    // Promoted (or demoted) by a host: reload so the whole page is built for the new role.
+    if (lastRole && lastRole !== state.me.role) {
+      toast(state.me.role === 'HOST' ? 'Jesteś teraz hostem!' : 'Straciłeś(-aś) uprawnienia hosta');
+      setTimeout(() => location.reload(), 900);
+    }
+    lastRole = state.me.role;
     const host = isHost();
     const role = $('role'); role.hidden = false; role.replaceChildren(el('span', { class: 'nm' }, (state.me.name || '') + ' · '), host ? 'host' : 'gość'); role.classList.toggle('host', host);
 
@@ -556,6 +562,7 @@
       el('div', { class: 'meta' }, el('div', { class: 't' }, x.name), el('div', { class: 's' }, x.role === 'HOST' ? 'Współhost' : x.hostRequested ? 'Prosi o uprawnienia hosta' : 'Gość')),
       el('div', { class: 'acts' },
         x.hostRequested ? [btn('close', 'Odrzuć', () => act('/api/guests/' + x.id + '/reject'), 'sm'), btn('check', 'Zatwierdź', () => act('/api/guests/' + x.id + '/approve'), 'primary sm')] : null,
+        x.role === 'GUEST' && !x.hostRequested ? btn('star', 'Mianuj hostem', () => act('/api/guests/' + x.id + '/approve', {}, x.name + ' jest teraz hostem'), 'sm') : null,
         x.role === 'HOST' && x.id !== state.me.id ? btn('', 'Odbierz host', () => act('/api/guests/' + x.id + '/demote'), 'sm') : null,
         x.id !== state.me.id ? btn('trash', 'Usuń', () => confirm('Usunąć ' + x.name + '?') && act('/api/guests/' + x.id + '/kick'), 'danger sm') : null))));
   }

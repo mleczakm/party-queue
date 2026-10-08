@@ -117,6 +117,15 @@ class PartyServerTest {
     }
 
     @Test
+    fun `a host can promote a guest who never asked`() = server {
+        val guest = join()
+        val token = guest["token"] as String
+        assertEquals(HttpStatusCode.Forbidden, call("/api/player/next", token).status)
+        assertEquals(HttpStatusCode.OK, call("/api/guests/${guest["id"]}/approve", party.hostGuest.token).status)
+        assertEquals(HttpStatusCode.OK, call("/api/player/next", token).status)
+    }
+
+    @Test
     fun `a host can move a song to the top, a guest cannot`() = server {
         val guest = join()["token"] as String
         listOf(1, 2, 3).forEach { party.enqueue(meta(it), "Host", Source.HOST) } // 1 plays, 2 and 3 wait
