@@ -59,6 +59,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.layout.windowInsetsTopHeight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -135,8 +136,15 @@ import kotlin.math.roundToInt
 
 private const val BROWSE_TAB = 3
 
+/** The title bar hides after this long without a touch. */
+private const val HEADER_HIDE_MS = 8_000L
+
 /** How large the YouTube preview of the playing song is. */
-private enum class Preview(val height: androidx.compose.ui.unit.Dp?) { Hidden(1.dp), Normal(230.dp), Full(null) }
+private enum class Preview(val height: androidx.compose.ui.unit.Dp?) {
+    Hidden(1.dp), Normal(230.dp), Full(null);
+
+    fun next() = entries[(ordinal + 1) % entries.size]
+}
 
 private fun fmt(ms: Long): String {
     val s = ms / 1000
@@ -160,12 +168,42 @@ fun HostApp(app: PartyApp, themeMode: ThemeMode, initialTab: Int = 0) {
     val proposalCount by remember { derivedStateOf { state.value.proposals.size } }
     val requestCount by remember { derivedStateOf { state.value.guests.count { it.hostRequested } } }
     val visible by app.player.visibleSession.collectAsStateWithLifecycle()
-    var preview by rememberSaveable { mutableStateOf(Preview.Normal) }
+    // The song's video is rarely needed at a party: hidden until the host asks for it.
+    var preview by rememberSaveable { mutableStateOf(Preview.Hidden) }
     var tab by rememberSaveable { mutableIntStateOf(initialTab) }
     val full = preview == Preview.Full
 
-    Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
-        PartyHeader(themeMode, playing) { app.cycleTheme() }
+    // The title bar gets out of the way after a while; dragging down anywhere (or the little handle) brings it back.
+    var headerShown by rememberSaveable { mutableStateOf(true) }
+    var lastTouch by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    LaunchedEffect(headerShown) {
+        while (headerShown) {
+            delay(1_000)
+            if (System.currentTimeMillis() - lastTouch > HEADER_HIDE_MS) headerShown = false
+        }
+    }
+
+    Column(
+        Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+            .pointerInput(Unit) {
+                // Watches only; every touch still reaches the controls below.
+                val reveal = 56.dp.toPx()
+                awaitPointerEventScope {
+                    var pulled = 0f
+                    while (true) {
+                        val event = awaitPointerEvent(PointerEventPass.Initial)
+                        lastTouch = System.currentTimeMillis()
+                        val c = event.changes.firstOrNull() ?: continue
+                        if (!c.pressed) { pulled = 0f; continue }
+                        if (c.previousPressed) pulled = (pulled + c.positionChange().y).coerceAtLeast(0f) else pulled = 0f
+                        if (pulled > reveal) { headerShown = true; pulled = 0f }
+                    }
+                }
+            }
+    ) {
+        PartyHeader(themeMode, playing, headerShown, onReveal = { headerShown = true; lastTouch = System.currentTimeMillis() }) { app.cycleTheme() }
 
         // Never under the navigation bar or a camera cut-out; the page itself must also stay clear of the bars.
         Column(
@@ -244,32 +282,43 @@ fun HostApp(app: PartyApp, themeMode: ThemeMode, initialTab: Int = 0) {
 // =====================================================================================================================
 
 @Composable
-private fun PartyHeader(mode: ThemeMode, playing: Boolean, onToggleTheme: () -> Unit) {
-    Box(
+private fun PartyHeader(mode: ThemeMode, playing: Boolean, shown: Boolean, onReveal: () -> Unit, onToggleTheme: () -> Unit) {
+    Column(
         Modifier
             .fillMaxWidth()
             .background(Brush.horizontalGradient(listOf(Brand.Pink, Brand.Violet, Brand.Blue)))
     ) {
-        Row(
-            Modifier
-                .windowInsetsPadding(WindowInsets.statusBars)
-                .padding(start = 14.dp, end = 8.dp, top = 6.dp, bottom = 6.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            BrandMark(size = 34.dp, bars = Brush.verticalGradient(listOf(Color.White, Color(0xFFFFE3F3))), spark = Brand.Lime)
-            Spacer(Modifier.width(10.dp))
-            Column(Modifier.weight(1f)) {
-                Text("Party Queue", color = Color.White, fontWeight = FontWeight.ExtraBold, fontSize = 20.sp, letterSpacing = (-0.3).sp)
-                Text("kolejka na każdą imprezę", color = Color.White.copy(alpha = 0.8f), fontSize = 11.sp)
-            }
-            EqualizerBars(playing, size = 22.dp, brush = Brush.verticalGradient(listOf(Color.White, Color(0xFFFFE3F3))))
-            Spacer(Modifier.width(6.dp))
-            RoundButton(onClick = onToggleTheme, size = 40.dp) {
-                when (mode) {
-                    ThemeMode.AUTO -> AutoGlyph(Color.White)
-                    ThemeMode.LIGHT -> SunGlyph(Color.White)
-                    ThemeMode.DARK -> MoonGlyph(Color.White)
+        // The page below must never slide under the status bar, so its strip stays even when the title is away.
+        Spacer(Modifier.windowInsetsTopHeight(WindowInsets.statusBars))
+        AnimatedVisibility(shown, enter = expandVertically() + fadeIn(), exit = shrinkVertically() + fadeOut()) {
+            Row(
+                Modifier.padding(start = 14.dp, end = 8.dp, top = 2.dp, bottom = 6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                BrandMark(size = 34.dp, bars = Brush.verticalGradient(listOf(Color.White, Color(0xFFFFE3F3))), spark = Brand.Lime)
+                Spacer(Modifier.width(10.dp))
+                Column(Modifier.weight(1f)) {
+                    Text("Party Queue", color = Color.White, fontWeight = FontWeight.ExtraBold, fontSize = 20.sp, letterSpacing = (-0.3).sp)
+                    Text("kolejka na każdą imprezę", color = Color.White.copy(alpha = 0.8f), fontSize = 11.sp)
                 }
+                EqualizerBars(playing, size = 22.dp, brush = Brush.verticalGradient(listOf(Color.White, Color(0xFFFFE3F3))))
+                Spacer(Modifier.width(6.dp))
+                RoundButton(onClick = onToggleTheme, size = 40.dp) {
+                    when (mode) {
+                        ThemeMode.AUTO -> AutoGlyph(Color.White)
+                        ThemeMode.LIGHT -> SunGlyph(Color.White)
+                        ThemeMode.DARK -> MoonGlyph(Color.White)
+                    }
+                }
+            }
+        }
+        AnimatedVisibility(!shown, enter = fadeIn(), exit = fadeOut()) {
+            // A small handle: tap it or pull down to bring the title back.
+            Box(
+                Modifier.fillMaxWidth().height(14.dp).clickable(indication = null, interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }, onClick = onReveal),
+                contentAlignment = Alignment.Center,
+            ) {
+                Box(Modifier.width(38.dp).height(4.dp).clip(RoundedCornerShape(50)).background(Color.White.copy(alpha = 0.75f)))
             }
         }
     }
@@ -400,33 +449,13 @@ private fun NowPlaying(state: State<Snapshot>, party: PartyController, preview: 
                     background = Brush.linearGradient(listOf(Color.White, Color(0xFFFFE3F3))),
                 ) { if (playing) PauseGlyph(Brand.Violet, 26.dp) else PlayGlyph(Brand.Violet, 26.dp) }
                 Spacer(Modifier.width(10.dp))
-                RoundButton(onClick = { party.next() }, size = 42.dp) { SkipGlyph(Color.White, previous = false) }
+                RoundButton(onClick = { party.skip() }, size = 42.dp) { SkipGlyph(Color.White, previous = false) }
                 Spacer(Modifier.weight(1f))
-                PreviewChip(if (preview == Preview.Hidden) "Pokaż podgląd" else "Ukryj podgląd") {
-                    setPreview(if (preview == Preview.Hidden) Preview.Normal else Preview.Hidden)
-                }
-                Spacer(Modifier.width(6.dp))
-                PreviewChip(if (preview == Preview.Full) "Zmniejsz" else "Powiększ") {
-                    setPreview(if (preview == Preview.Full) Preview.Normal else Preview.Full)
-                }
+                // One button, three states: no preview (crossed-out screen), small preview, full screen.
+                RoundButton(onClick = { setPreview(preview.next()) }, size = 42.dp) { ScreenGlyph(Color.White, preview) }
             }
         }
     }
-}
-
-@Composable
-private fun PreviewChip(text: String, onClick: () -> Unit) {
-    Text(
-        text,
-        color = Color.White,
-        fontSize = 11.sp,
-        fontWeight = FontWeight.Bold,
-        modifier = Modifier
-            .clip(RoundedCornerShape(50))
-            .background(Color.White.copy(alpha = 0.2f))
-            .clickable(onClick = onClick)
-            .padding(horizontal = 10.dp, vertical = 6.dp),
-    )
 }
 
 /** Without this exemption Android may freeze playback and the guest server once the screen is off. */
@@ -1026,7 +1055,7 @@ private fun BrowseTab(app: PartyApp, party: PartyController) {
                 if (videoId != null) {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                         GradientButton("Dodaj do kolejki", {
-                            work { party.enqueue(party.yt.meta(videoId), "Host", Source.HOST); "Dodano do kolejki" }
+                            work { party.enqueue(party.yt.meta(videoId), "Host", Source.HOST, atEnd = true); "Dodano na koniec kolejki" }
                         }, Modifier.weight(1f), enabled = !busy)
                         OutlinedButton(onClick = {
                             work { party.enqueue(party.yt.meta(videoId), "Host", Source.HOST, playNext = true); "Zagra jako następny" }
@@ -1079,7 +1108,7 @@ private fun BrowseTab(app: PartyApp, party: PartyController) {
                                 party.loadPlaylist(link, shuffle)
                                 "Aktualna playlista: „${party.state.value.playlistTitle}”."
                             }
-                            vid != null -> { party.enqueue(party.yt.meta(vid), "Host", Source.HOST); "Dodano do kolejki" }
+                            vid != null -> { party.enqueue(party.yt.meta(vid), "Host", Source.HOST, atEnd = true); "Dodano na koniec kolejki" }
                             else -> throw PartyException("To nie wygląda na link do filmu ani playlisty z YouTube")
                         }
                     }

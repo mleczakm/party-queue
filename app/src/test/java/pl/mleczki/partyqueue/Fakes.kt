@@ -37,9 +37,10 @@ class FakePrefs : SharedPreferences {
 
 class FakePlayer : PlayerPort {
     val loads = mutableListOf<String>()
+    val fades = mutableListOf<Int>()
     val commands = mutableListOf<Pair<String, Double>>()
 
-    override fun load(videoId: String) { loads += videoId }
+    override fun load(videoId: String, fadeMs: Int) { loads += videoId; fades += fadeMs }
     override fun command(cmd: String, arg: Double) { commands += cmd to arg }
 }
 

@@ -57,6 +57,11 @@ Use a real phone, not an emulator. Note the phone model and Android version in t
 - [ ] Press BACK on the host: the app hides, music keeps playing; reopening shows the video, not a blank pane.
 - [ ] Swipe the app away from recents: the notification and playback survive or stop cleanly (note which).
 
+**Fading**
+- [ ] Press ⏭ while a song plays: the old song fades out over ~2 s as the next one fades in (no gap, no jump in loudness).
+  Same for ⏮ and for swiping a row right. When a song ends by itself the next one starts at once, without a fade.
+- [ ] Skip to a song that was not prepared (e.g. swipe a row far down the queue): the old song keeps playing until the new one is loaded, then they cross over.
+
 **Queue list**
 - [ ] Every row shows a thumbnail; titles stay on one line, and a title longer than the row scrolls slowly.
 
@@ -96,6 +101,9 @@ Use a real phone, not an emulator. Note the phone model and Android version in t
 - [ ] A removed guest is logged out at once.
 
 **Interface**
+- [ ] The preview button next to ⏭ cycles: crossed-out screen (no preview, the default) → empty screen (small) → full screen.
+- [ ] The title bar disappears after ~8 s without touching; the status-bar strip and a small handle stay; dragging down or tapping the handle brings it back.
+- [ ] *Dodaj do kolejki* in the YouTube tab puts the song at the end of the queue.
 - [ ] Light, dark and *auto* theme (sun/moon button in the header) all look right; the choice is remembered.
 - [ ] The launcher icon (also the themed monochrome one on Android 13+) and the notification icon show the three bars.
 - [ ] Tabs are *Kolejka · Propozycje · Zaproś · YouTube*; there is no *Dodaj* tab. The *Powtarzaj* switch and *Wyczyść* are in the queue header.

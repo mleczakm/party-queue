@@ -62,6 +62,13 @@ class PlayerBridge(private val context: Context, private val runtime: GeckoRunti
     val visibleSession: StateFlow<GeckoSession> = _visible.asStateFlow()
 
     private var wantedPreload: String? = null
+
+    /** A manual change of a song that was not prepared: it loads on the spare page, then swaps in with a fade. */
+    private class PendingFade(val slot: Slot, val videoId: String, val fadeMs: Int)
+    private var pendingFade: PendingFade? = null
+
+    /** The spare page is still fading its old song out until then; it cannot take a new song before. */
+    private var spareBusyUntil = 0L
     private var activePlaying = false
     private var loadStartedAt = 0L
     private var loadStartedId = ""
@@ -177,6 +184,12 @@ class PlayerBridge(private val context: Context, private val runtime: GeckoRunti
             "standbyReady" -> if (slot !== active && vid == slot.videoId) {
                 slot.ready = true
                 Log.i(TAG, "slot ${slot.id} holds $vid, ready")
+                pendingFade?.takeIf { it.slot === slot && it.videoId == vid }?.let {
+                    pendingFade = null
+                    loadStartedAt = SystemClock.elapsedRealtime()
+                    loadStartedId = vid
+                    swapTo(slot, it.fadeMs)
+                }
             }
             else -> if (slot === active) {
                 if (m.optString("type") == "state") {
@@ -216,31 +229,50 @@ class PlayerBridge(private val context: Context, private val runtime: GeckoRunti
         active.session.loadUri("http://127.0.0.1:${PartyServer.PORT}/idle")
     }
 
-    override fun load(videoId: String) {
+    override fun load(videoId: String, fadeMs: Int) {
         main.post {
             if (!ready) {
                 pendingVideo = videoId
                 return@post
             }
+            pendingFade = null
+            val fade = if (fadeMs > 0 && activePlaying && !idle) fadeMs else 0
             idle = false
             loadStartedAt = SystemClock.elapsedRealtime()
             loadStartedId = videoId
-            activePlaying = false
             val prepared = b?.let { spare.takeIf { s -> s.videoId == videoId && s.ready } }
             if (prepared != null) {
-                swapTo(prepared)
+                activePlaying = false
+                swapTo(prepared, fade)
+            } else if (fade > 0) {
+                // The old song keeps playing until the new one is loaded; then they cross over.
+                val target = spare
+                pendingFade = PendingFade(target, videoId, fade)
+                target.ready = false
+                loadInto(target, videoId, standby = true)
+                main.postDelayed({
+                    if (pendingFade?.videoId == videoId) {
+                        Log.w(TAG, "faded change of $videoId took too long; loading it directly")
+                        pendingFade = null
+                        activePlaying = false
+                        loadInto(active, videoId, standby = false)
+                    }
+                }, FADE_WAIT_MS)
             } else {
+                activePlaying = false
                 loadInto(active, videoId, standby = false)
             }
         }
     }
 
     /** The next song is already buffered on the spare page: make that page the one that plays. */
-    private fun swapTo(next: Slot) {
+    private fun swapTo(next: Slot, fadeMs: Int = 0) {
         val old = active
-        Log.i(TAG, "swap ${old.id} -> ${next.id} for ${next.videoId}")
-        send(old, "deactivate")
-        send(next, "activate")
+        Log.i(TAG, "swap ${old.id} -> ${next.id} for ${next.videoId}" + if (fadeMs > 0) " (fade $fadeMs ms)" else "")
+        activePlaying = false
+        send(old, if (fadeMs > 0) "fadeOut" else "deactivate") { it.put("fade", fadeMs) }
+        send(next, "activate") { it.put("fade", fadeMs) }
+        spareBusyUntil = if (fadeMs > 0) SystemClock.elapsedRealtime() + fadeMs + 600 else 0L
         active = next
         next.ready = false
         old.ready = false
@@ -259,7 +291,12 @@ class PlayerBridge(private val context: Context, private val runtime: GeckoRunti
     }
 
     private fun maybePreload() {
-        if (!ready || idle || !activePlaying) return
+        if (!ready || idle || !activePlaying || pendingFade != null) return
+        val wait = spareBusyUntil - SystemClock.elapsedRealtime()
+        if (wait > 0) {
+            main.postDelayed(::maybePreload, wait + 50)
+            return
+        }
         val id = wantedPreload
         if (id == null) {
             b?.let { it.videoId = null; it.ready = false }
@@ -372,6 +409,7 @@ class PlayerBridge(private val context: Context, private val runtime: GeckoRunti
     private companion object {
         const val TAG = "PartyQueue"
         const val IN_PLACE_TIMEOUT_MS = 12_000L
+        private const val FADE_WAIT_MS = 25_000L
         const val YOUTUBE_HOME = "https://m.youtube.com/"
     }
 }

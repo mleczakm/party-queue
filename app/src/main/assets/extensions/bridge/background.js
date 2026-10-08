@@ -24,3 +24,4 @@ browser.runtime.onConnect.addListener((port) => {
 });
 
 connectNative();
+

@@ -8,6 +8,10 @@ git tag `v<version>`.
 ## [Unreleased]
 
 ### Added
+- Changing a song by hand (next, previous, play now / swipe right, or a guest co-host pressing next) fades the old song
+  out (2 s) while the next one fades in, once the next one is loaded; a song that simply ends still switches instantly.
+- The preview of the playing video is one icon button (crossed-out screen / screen / full screen) and is hidden by default.
+- The title bar hides after 8 s without a touch; a small handle (or a pull down) brings it back.
 - New look: light and dark colour themes (header button: auto / light / dark), party style with gradients, a
   slowly flowing now-playing card, animated equalizer, sliding tab indicator and transitions.
 - Branding: new app icon (adaptive, with a monochrome variant), notification icon, splash colour, `branding/` assets.
@@ -36,6 +40,8 @@ git tag `v<version>`.
   and the next song is prepared in advance (see Added).
 
 ### Changed
+- *Dodaj do kolejki* (host app, pasted link, the host's *Dodaj* on the guest page) puts the song at the **end** of the queue;
+  *Jako następny* still puts it first, and songs approved from guests' proposals still go before the rest of the playlist.
 - The *Dołącz* tab is now *Zaproś*; the *Dodaj* tab is gone (its functions moved to the queue header and the YouTube tab).
 - Joining needs no code: whoever opens the page and gives a name is a guest. The QR code simply opens the page and has a
   proper white border; *Nowy kod QR* is gone.

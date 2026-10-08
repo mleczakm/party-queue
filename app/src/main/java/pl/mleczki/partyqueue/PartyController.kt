@@ -17,7 +17,8 @@ import org.json.JSONArray
 import org.json.JSONObject
 
 interface PlayerPort {
-    fun load(videoId: String)
+    /** [fadeMs] > 0: the song that is playing fades out while this one fades in (only for manual changes). */
+    fun load(videoId: String, fadeMs: Int = 0)
     fun command(cmd: String, arg: Double = 0.0)
 }
 
@@ -152,7 +153,7 @@ class PartyController(
     suspend fun propose(videoId: String, by: Guest) {
         val meta = yt.meta(videoId)
         if (by.role == Role.HOST) {
-            enqueue(meta, by.name, Source.HOST)
+            enqueue(meta, by.name, Source.HOST, atEnd = true)
             return
         }
         val s = _state.value
@@ -176,11 +177,19 @@ class PartyController(
         _state.update { it.copy(proposals = it.proposals.filterNot { x -> x.id == proposalId }) }
     }
 
-    fun enqueue(meta: Meta, by: String, source: Source, playNext: Boolean = false) {
+    /**
+     * Adds a song. [playNext] puts it first, [atEnd] last (what the host's "Dodaj" does); by default (approved
+     * proposals) it goes behind the other requested songs but before the rest of the playlist.
+     */
+    fun enqueue(meta: Meta, by: String, source: Source, playNext: Boolean = false, atEnd: Boolean = false) {
         val t = Track(randomToken(8), meta.videoId, meta.title, meta.channel, meta.duration, by, source, priority = true)
         _state.update { s ->
             val q = s.queue.toMutableList()
-            val idx = if (playNext) 0 else q.indexOfFirst { !it.priority }.let { if (it < 0) q.size else it }
+            val idx = when {
+                playNext -> 0
+                atEnd -> q.size
+                else -> q.indexOfFirst { !it.priority }.let { if (it < 0) q.size else it }
+            }
             q.add(idx, t)
             s.copy(queue = q)
         }
@@ -266,7 +275,11 @@ class PartyController(
 
     // ---------------------------------------------------------------- playback
 
-    fun next() {
+    /** The host (or a co-host) pressed "next": the old song fades away under the new one. */
+    fun skip() = next(fade = true)
+
+    fun next(fade: Boolean = false) {
+        val audible = fade && _state.value.player.status == "playing"
         var started: Track? = null
         _state.update { s ->
             var q = s.queue
@@ -284,7 +297,7 @@ class PartyController(
             )
         }
         val t = started
-        if (t != null) launchTrack(t) else {
+        if (t != null) launchTrack(t, audible) else {
             watchdog?.cancel()
             player?.command("stop")
         }
@@ -292,6 +305,7 @@ class PartyController(
 
     fun previous() {
         val prev = _state.value.history.firstOrNull() ?: return
+        val audible = _state.value.player.status == "playing"
         _state.update { s ->
             s.copy(
                 history = s.history.drop(1),
@@ -300,10 +314,11 @@ class PartyController(
                 player = PlayerInfo(status = "loading"),
             )
         }
-        launchTrack(prev)
+        launchTrack(prev, audible)
     }
 
     private fun startTrack(t: Track, pushCurrent: Boolean) {
+        val audible = pushCurrent && _state.value.player.status == "playing"
         _state.update { s ->
             s.copy(
                 history = if (pushCurrent) (listOfNotNull(s.current) + s.history).take(HISTORY_MAX) else s.history,
@@ -311,11 +326,11 @@ class PartyController(
                 player = PlayerInfo(status = "loading"),
             )
         }
-        launchTrack(t)
+        launchTrack(t, audible)
     }
 
-    private fun launchTrack(t: Track) {
-        player?.load(t.videoId)
+    private fun launchTrack(t: Track, fade: Boolean = false) {
+        player?.load(t.videoId, if (fade) FADE_MS else 0)
         watchdog?.cancel()
         watchdog = scope.launch {
             delay(LOAD_TIMEOUT_MS)
@@ -419,5 +434,8 @@ class PartyController(
         private const val HISTORY_MAX = 50
         // Generous: with the screen off a page can take a while to start, and skipping a song that is about to play is worse.
         private const val LOAD_TIMEOUT_MS = 45_000L
+
+        /** How long the old song takes to fade out when a song is changed by hand. */
+        const val FADE_MS = 2_000
     }
 }

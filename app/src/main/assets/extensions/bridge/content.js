@@ -209,6 +209,23 @@
     }
   }, 1000);
 
+  // ---------------------------------------------------------------- volume ramps (crossfade)
+  // Equal-power curves keep the loudness steady while one song fades out and the next fades in.
+  let rampTimer = 0;
+  function ramp(el, dir, ms, done) {
+    clearInterval(rampTimer);
+    const t0 = performance.now();
+    const set = (v) => { try { el.volume = Math.min(1, Math.max(0, v)); } catch (e) { /* element gone */ } };
+    set(dir > 0 ? 0 : el.volume || 1);
+    const from = dir > 0 ? 0 : (el.volume || 1);
+    rampTimer = setInterval(() => {
+      const x = Math.min(1, (performance.now() - t0) / ms);
+      set(dir > 0 ? Math.sin(x * Math.PI / 2) : from * Math.cos(x * Math.PI / 2));
+      if (x >= 1) { clearInterval(rampTimer); rampTimer = 0; if (done) done(); }
+    }, 40);
+  }
+  function stopRamp() { clearInterval(rampTimer); rampTimer = 0; }
+
   // Switching songs inside the page that is already running avoids reloading YouTube's player.
   function loadInPlace(id, asStandby) {
     try {
@@ -219,7 +236,8 @@
       hostPaused = standby;
       announced = "";
       freshLoadPending = true;
-      if (video) video.muted = standby;
+      stopRamp();
+      if (video) { video.muted = standby; video.volume = 1; }
       api.loadVideoById(id);
       history.replaceState(null, "", "/watch?v=" + id + "&pq=" + slot + (standby ? "&standby=1" : ""));
       startedFor = id;
@@ -236,20 +254,34 @@
     if (cmd.cmd === "loadVideo") { loadInPlace(cmd.id, cmd.standby); return; }
     if (!video) return;
     switch (cmd.cmd) {
-      case "activate": // the app switches to this page: the prepared song starts now
+      case "activate": // the app switches to this page: the prepared song starts now (cmd.fade ms: fading in)
         standby = false;
         hostPaused = false;
+        stopRamp();
         video.muted = false;
         video.currentTime = 0;
+        if (cmd.fade > 0) ramp(video, 1, cmd.fade); else video.volume = 1;
         video.play().catch(() => {});
         break;
       case "deactivate": // the song of this page is over; it becomes the spare
-        standby = true;
-        hostPaused = true;
-        announced = "";
-        video.pause();
-        video.muted = true;
+      case "fadeOut": { // ... or it fades away under the next one first
+        const finish = () => {
+          standby = true;
+          hostPaused = true;
+          announced = "";
+          video.pause();
+          video.muted = true;
+          video.volume = 1;
+        };
+        if (cmd.cmd === "fadeOut" && cmd.fade > 0) {
+          hostPaused = true; // the page must not resume it while it fades
+          ramp(video, -1, cmd.fade, finish);
+        } else {
+          stopRamp();
+          finish();
+        }
         break;
+      }
       case "play": hostPaused = false; video.play().catch(() => {}); break;
       case "pause": hostPaused = true; video.pause(); break;
       case "seek": video.currentTime = (cmd.arg || 0) / 1000; break;

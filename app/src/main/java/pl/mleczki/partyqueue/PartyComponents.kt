@@ -252,6 +252,30 @@ fun AutoGlyph(color: Color, size: Dp = 22.dp) = Canvas(Modifier.size(size)) {
     drawArc(color, 90f, 180f, true, Offset(s * 0.16f, s * 0.16f), Size(s * 0.68f, s * 0.68f))
 }
 
+/** The preview state: a crossed-out screen (hidden), an empty screen (small) or a screen with corner brackets (full). */
+@Composable
+fun ScreenGlyph(color: Color, state: Any, size: Dp = 24.dp) = Canvas(Modifier.size(size)) {
+    val w = this.size.width
+    val h = this.size.height
+    val stroke = w * 0.09f
+    when (state.toString()) {
+        "Full" -> {
+            val a = w * 0.2f
+            val l = w * 0.3f
+            for ((x, y, dx, dy) in listOf(listOf(a, a, 1f, 1f), listOf(w - a, a, -1f, 1f), listOf(a, h - a, 1f, -1f), listOf(w - a, h - a, -1f, -1f))) {
+                drawLine(color, Offset(x, y), Offset(x + dx * l, y), stroke, StrokeCap.Round)
+                drawLine(color, Offset(x, y), Offset(x, y + dy * l), stroke, StrokeCap.Round)
+            }
+        }
+        else -> {
+            drawRoundRect(color, Offset(w * 0.12f, h * 0.22f), Size(w * 0.76f, h * 0.56f), CornerRadius(w * 0.1f), style = Stroke(stroke))
+            if (state.toString() == "Hidden") {
+                drawLine(color, Offset(w * 0.14f, h * 0.9f), Offset(w * 0.86f, h * 0.1f), stroke * 1.2f, StrokeCap.Round)
+            }
+        }
+    }
+}
+
 // ------------------------------------------------------------------ surfaces
 
 /** A card whose gradient slowly drifts: the "now playing" panel. [t] is read in the draw phase only. */

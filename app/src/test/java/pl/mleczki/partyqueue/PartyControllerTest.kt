@@ -51,6 +51,45 @@ class PartyControllerTest {
         try { r.party.join("   "); fail() } catch (e: PartyException) { /* expected */ }
     }
 
+    // ------------------------------------------------------------ fading
+
+    @Test
+    fun `only a manual change of a playing song fades, a song that simply ends does not`() = runTest {
+        val r = rig()
+        listOf(1, 2, 3, 4).forEach { r.party.enqueue(meta(it), "Host", Source.HOST) }
+        r.party.onPlayerMessage(msg("state", meta(1).videoId, "playing"))
+        r.party.next() // as when the song ends or fails
+        assertEquals(0, r.player.fades.last())
+        r.party.onPlayerMessage(msg("state", meta(2).videoId, "playing"))
+        r.party.skip()
+        assertEquals(PartyController.FADE_MS, r.player.fades.last())
+        r.party.onPlayerMessage(msg("state", meta(3).videoId, "playing"))
+        r.party.playNow(r.state().queue.last().uid)
+        assertEquals(PartyController.FADE_MS, r.player.fades.last())
+    }
+
+    @Test
+    fun `nothing fades when nothing was playing`() = runTest {
+        val r = rig()
+        listOf(1, 2).forEach { r.party.enqueue(meta(it), "Host", Source.HOST) }
+        r.party.skip() // the first song is still loading
+        assertEquals(0, r.player.fades.last())
+    }
+
+    // ------------------------------------------------------------ adding
+
+    @Test
+    fun `the host's add goes to the end of the queue, approved songs before the rest of the playlist`() = runTest {
+        val playlist = (10..13).map { meta(it) }
+        val r = rig(playlist)
+        r.party.loadPlaylist("PLxxxxxxxxxx", false)
+        r.party.enqueue(meta(1), "Host", Source.HOST, atEnd = true)
+        assertEquals(meta(1).videoId, r.state().queue.last().videoId)
+        r.party.enqueue(meta(2), "Ola", Source.GUEST)
+        assertEquals(meta(2).videoId, r.state().queue.first { it.priority }.videoId)
+        assertEquals(meta(1).videoId, r.state().queue.last().videoId)
+    }
+
     // ------------------------------------------------------------ roles
 
     @Test

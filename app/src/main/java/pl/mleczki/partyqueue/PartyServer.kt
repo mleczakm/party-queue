@@ -158,7 +158,7 @@ fun Application.partyModule(party: PartyController, indexHtml: String) {
             handle(party, call, hostOnly = true) { _, body ->
                 when (call.parameters["cmd"]) {
                     "toggle" -> party.togglePlay()
-                    "next" -> party.next()
+                    "next" -> party.skip()
                     "prev" -> party.previous()
                     "seek" -> party.seek(body.optLong("ms"))
                     "repeat" -> party.setRepeat(body.optBoolean("on"))
