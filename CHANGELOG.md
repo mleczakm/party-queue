@@ -7,6 +7,8 @@ git tag `v<version>`.
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-10-08
+
 ### Added
 - Volume control on the guest/co-host page (slider, mute, `+` `−` `M` keys) for the phone's media volume; it follows the volume keys
   (`POST /api/player/volume`, `volume` in the state).
@@ -88,6 +90,7 @@ First public version.
   pause itself; the app's own pause button still works. The bridge also acts only on the page's main `<video>`
   element instead of any spare one.
 
-[Unreleased]: https://github.com/mleczakm/party-queue/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/mleczakm/party-queue/compare/v0.2.1...HEAD
+[0.2.1]: https://github.com/mleczakm/party-queue/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/mleczakm/party-queue/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/mleczakm/party-queue/releases/tag/v0.1.0
