@@ -91,6 +91,7 @@ Use a real phone, not an emulator. Note the phone model and Android version in t
 - [ ] The layout uses two columns (player on the left, tabs on the right) and scales to a wide window.
 - [ ] As a host: Space pauses, N / P skip, ↑ ↓ select a song, Enter plays it, T moves it to the top, Delete removes it,
   Alt+↑/↓ moves it, R toggles repeat, / opens search, 1-5 switch tabs, D changes the theme, ? lists the shortcuts.
+- [ ] As a host: the volume slider in the player card changes the phone's volume; pressing the phone's volume keys moves the slider; `+`/`−` and `M` work; guests see no slider.
 - [ ] Rows can be dragged with the mouse; double-click plays a song; buttons show tooltips with their shortcut.
 - [ ] As a guest only the shortcuts that apply (search, tabs, theme, help) do anything.
 

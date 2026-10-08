@@ -61,3 +61,8 @@ class FakeSource(private val playlist: List<Meta> = emptyList(), private val mix
 }
 
 fun meta(n: Int) = Meta("v%010d".format(n), "Song $n", "Artist $n", "3:%02d".format(n % 60))
+
+class FakeVolume(var level: Int = 30) : VolumeControl {
+    override fun percent() = level
+    override fun setPercent(percent: Int) { level = percent }
+}

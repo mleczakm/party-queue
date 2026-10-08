@@ -117,6 +117,18 @@ class PartyServerTest {
     }
 
     @Test
+    fun `only hosts change the volume and everybody sees it`() = server {
+        val volume = FakeVolume(30).also { party.volumeControl = it }
+        val guest = join()["token"] as String
+        assertEquals(HttpStatusCode.Forbidden, call("/api/player/volume", guest, """{"level":90}""").status)
+        assertEquals(30, volume.level)
+        assertEquals(HttpStatusCode.OK, call("/api/player/volume", party.hostGuest.token, """{"level":70}""").status)
+        assertEquals(70, volume.level)
+        assertEquals(70, party.state.value.volume)
+        assertEquals(100, run { call("/api/player/volume", party.hostGuest.token, """{"level":500}"""); volume.level })
+    }
+
+    @Test
     fun `a host can promote a guest who never asked`() = server {
         val guest = join()
         val token = guest["token"] as String

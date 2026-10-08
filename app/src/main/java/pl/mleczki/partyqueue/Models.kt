@@ -62,6 +62,8 @@ data class Snapshot(
     val playlistUrl: String = "",
     val repeat: Boolean = true,
     val notice: String? = null,
+    /** The phone's media volume in percent; -1 when unknown. */
+    val volume: Int = -1,
 )
 
 private val rng = SecureRandom()

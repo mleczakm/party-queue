@@ -162,6 +162,7 @@ fun Application.partyModule(party: PartyController, indexHtml: String) {
                     "prev" -> party.previous()
                     "seek" -> party.seek(body.optLong("ms"))
                     "repeat" -> party.setRepeat(body.optBoolean("on"))
+                    "volume" -> party.setVolume(body.optInt("level"))
                     else -> throw PartyException("Nieznana komenda")
                 }
                 null

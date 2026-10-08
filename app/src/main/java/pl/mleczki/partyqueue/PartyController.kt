@@ -22,6 +22,12 @@ interface PlayerPort {
     fun command(cmd: String, arg: Double = 0.0)
 }
 
+/** The phone's media volume, behind an interface so the controller stays testable on the JVM. */
+interface VolumeControl {
+    fun percent(): Int
+    fun setPercent(percent: Int)
+}
+
 class PartyException(message: String) : Exception(message)
 
 /**
@@ -35,6 +41,7 @@ class PartyController(
     private val scope: CoroutineScope,
 ) {
     var player: PlayerPort? = null
+    var volumeControl: VolumeControl? = null
 
     val hostGuest: Guest
     private val _state: MutableStateFlow<Snapshot>
@@ -266,6 +273,18 @@ class PartyController(
         persist()
     }
 
+    /** Sets the phone's media volume (0..100) and tells everybody. */
+    fun setVolume(percent: Int) {
+        volumeControl?.setPercent(percent.coerceIn(0, 100)) ?: throw PartyException("Nie można zmienić głośności")
+        refreshVolume()
+    }
+
+    /** Reads the volume again (the volume keys change it too). */
+    fun refreshVolume() {
+        val v = volumeControl?.percent() ?: return
+        _state.update { if (it.volume == v) it else it.copy(volume = v) }
+    }
+
     fun setRepeat(on: Boolean) {
         _state.update { it.copy(repeat = on) }
         persist()
@@ -404,6 +423,7 @@ class PartyController(
         o.put("queue", s.queue.toJsonArray { it.toJson() })
         o.put("playlist", s.playlistTitle ?: JSONObject.NULL)
         o.put("repeat", s.repeat)
+        o.put("volume", s.volume)
         o.put("notice", s.notice ?: JSONObject.NULL)
         val visibleProposals = if (isHost) s.proposals else s.proposals.filter { it.byId == viewerId }
         o.put("proposals", visibleProposals.toJsonArray { it.toJson() })

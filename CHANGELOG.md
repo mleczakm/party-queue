@@ -7,6 +7,10 @@ git tag `v<version>`.
 
 ## [Unreleased]
 
+### Added
+- Volume control on the guest/co-host page (slider, mute, `+` `−` `M` keys) for the phone's media volume; it follows the volume keys
+  (`POST /api/player/volume`, `volume` in the state).
+
 ## [0.2.0] - 2026-10-08
 
 ### Added

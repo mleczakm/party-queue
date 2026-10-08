@@ -1,6 +1,13 @@
 package pl.mleczki.partyqueue
 
 import android.app.Application
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
+import android.media.AudioManager
+import androidx.core.content.ContextCompat
+import kotlin.math.roundToInt
 import android.util.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -15,6 +22,17 @@ import org.mozilla.geckoview.GeckoPreferenceController
 import org.mozilla.geckoview.GeckoRuntime
 import org.mozilla.geckoview.GeckoRuntimeSettings
 import java.io.File
+
+/** The media volume of the phone (the one the volume keys change). */
+private class PhoneVolume(private val audio: AudioManager) : VolumeControl {
+    private val max = audio.getStreamMaxVolume(AudioManager.STREAM_MUSIC).coerceAtLeast(1)
+
+    override fun percent() = (audio.getStreamVolume(AudioManager.STREAM_MUSIC) * 100f / max).roundToInt()
+
+    override fun setPercent(percent: Int) {
+        runCatching { audio.setStreamVolume(AudioManager.STREAM_MUSIC, (percent * max / 100f).roundToInt(), 0) }
+    }
+}
 
 class PartyApp : Application() {
 
@@ -61,6 +79,12 @@ class PartyApp : Application() {
             it.party = party
             party.player = it
         }
+        party.volumeControl = PhoneVolume(getSystemService(AudioManager::class.java))
+        party.refreshVolume()
+        // The volume keys change it as well: keep the guests' sliders in step.
+        ContextCompat.registerReceiver(this, object : BroadcastReceiver() {
+            override fun onReceive(context: Context, intent: Intent) = party.refreshVolume()
+        }, IntentFilter("android.media.VOLUME_CHANGED_ACTION"), ContextCompat.RECEIVER_NOT_EXPORTED)
         server = PartyServer(this, party).also { it.start() }
         // Keep the spare player page loaded with the song that comes next.
         scope.launch {
