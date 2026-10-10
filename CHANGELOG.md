@@ -10,6 +10,10 @@ git tag `v<version>`.
 ## [0.2.1] - 2026-10-08
 
 ### Added
+- Search in the app: *Szukaj piosenki do dodania* at the top of the queue opens a full-screen search (title, artist or link). Every
+  result has two icon buttons - an arrow pointing to the top of a list ("jako następna") and one pointing to the bottom
+  ("na koniec kolejki"); the search stays open so several songs can be added in a row. The guest page's host search uses
+  the same icons and labels.
 - Volume control on the guest/co-host page (slider, mute, `+` `−` `M` keys) for the phone's media volume; it follows the volume keys
   (`POST /api/player/volume`, `volume` in the state).
 

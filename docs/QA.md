@@ -60,6 +60,11 @@ Use a real phone, not an emulator. Note the phone model and Android version in t
 **Volume**
 - [ ] The slider under the controls changes the media volume and follows the phone's volume keys; tapping the speaker mutes and restores.
 
+**Adding a song**
+- [ ] Queue tab → *Szukaj piosenki do dodania*: search by title and by pasted link; the keyboard's search key works.
+- [ ] The up-arrow button adds the song as the next one (it becomes the first row), the down-arrow button adds it to the end; the result shows which was chosen; adding several in a row works.
+- [ ] Same on the guest page as a host (search tab: *Następna* / *Na koniec*); as a plain guest only *Zaproponuj* is shown.
+
 **Fading**
 - [ ] Press ⏭ while a song plays: the old song fades out over ~2 s as the next one fades in (no gap, no jump in loudness).
   Same for ⏮ and for swiping a row right. When a song ends by itself the next one starts at once, without a fade.

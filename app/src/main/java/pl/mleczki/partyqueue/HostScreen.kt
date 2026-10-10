@@ -183,6 +183,7 @@ fun HostApp(app: PartyApp, themeMode: ThemeMode, initialTab: Int = 0, initialPre
     // The song's video is rarely needed at a party: hidden until the host asks for it.
     var preview by rememberSaveable { mutableStateOf(Preview.entries[initialPreview.coerceIn(0, 2)]) }
     var tab by rememberSaveable { mutableIntStateOf(initialTab) }
+    var searchOpen by rememberSaveable { mutableStateOf(false) }
     val full = preview == Preview.Full
 
     // The title bar gets out of the way after a while; dragging down anywhere (or the little handle) brings it back.
@@ -194,6 +195,8 @@ fun HostApp(app: PartyApp, themeMode: ThemeMode, initialTab: Int = 0, initialPre
             if (System.currentTimeMillis() - lastTouch > HEADER_HIDE_MS) headerShown = false
         }
     }
+
+    if (searchOpen) SearchDialog(party) { searchOpen = false }
 
     Column(
         Modifier
@@ -285,7 +288,7 @@ fun HostApp(app: PartyApp, themeMode: ThemeMode, initialTab: Int = 0, initialPre
                         label = "tab",
                     ) { target ->
                         when (target) {
-                            0 -> QueueTab(state, party)
+                            0 -> QueueTab(state, party) { searchOpen = true }
                             1 -> ProposalsTab(state, party)
                             2 -> InviteTab(state, party, app.server.port)
                             else -> BrowseTab(app, party)
@@ -731,7 +734,7 @@ private const val IDLE_HINT_MS = 45_000L
 private const val HINT_REPEAT_MS = 180_000L
 
 @Composable
-private fun QueueTab(state: State<Snapshot>, party: PartyController) {
+private fun QueueTab(state: State<Snapshot>, party: PartyController, onSearch: () -> Unit) {
     val queue by remember { derivedStateOf { state.value.queue } }
     val repeat by remember { derivedStateOf { state.value.repeat } }
     val ctx = LocalContext.current
@@ -785,10 +788,13 @@ private fun QueueTab(state: State<Snapshot>, party: PartyController) {
     }
 
     if (queue.isEmpty()) {
-        EmptyState(
-            title = "Kolejka jest pusta",
-            text = "Otwórz kartę YouTube, wybierz playlistę i ustaw ją jako aktualną. Goście też mogą proponować utwory.",
-        )
+        Column(Modifier.fillMaxSize()) {
+            SearchPill(onSearch)
+            EmptyState(
+                title = "Kolejka jest pusta",
+                text = "Wyszukaj piosenkę albo otwórz kartę YouTube i ustaw playlistę jako aktualną. Goście też mogą proponować utwory.",
+            )
+        }
         return
     }
     Column(
@@ -801,6 +807,7 @@ private fun QueueTab(state: State<Snapshot>, party: PartyController) {
             }
         }
     ) {
+        SearchPill(onSearch)
         Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 4.dp, top = 6.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Text("W kolejce: ${queue.size}", style = MaterialTheme.typography.titleSmall)

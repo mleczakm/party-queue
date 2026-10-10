@@ -298,6 +298,46 @@ fun VolumeGlyph(color: Color, level: Float, size: Dp = 20.dp) = Canvas(Modifier.
     }
 }
 
+@Composable
+fun SearchGlyph(color: Color, size: Dp = 22.dp) = Canvas(Modifier.size(size)) {
+    val s = this.size.minDimension
+    drawCircle(color, s * 0.3f, Offset(s * 0.43f, s * 0.43f), style = Stroke(s * 0.1f))
+    drawLine(color, Offset(s * 0.66f, s * 0.66f), Offset(s * 0.9f, s * 0.9f), s * 0.11f, StrokeCap.Round)
+}
+
+@Composable
+fun CloseGlyph(color: Color, size: Dp = 22.dp) = Canvas(Modifier.size(size)) {
+    val s = this.size.minDimension
+    drawLine(color, Offset(s * 0.2f, s * 0.2f), Offset(s * 0.8f, s * 0.8f), s * 0.1f, StrokeCap.Round)
+    drawLine(color, Offset(s * 0.8f, s * 0.2f), Offset(s * 0.2f, s * 0.8f), s * 0.1f, StrokeCap.Round)
+}
+
+/**
+ * "Where in the queue": a list of three lines with an arrow pointing at its top (the song plays next)
+ * or at its bottom (it is added to the end).
+ */
+@Composable
+fun QueuePlaceGlyph(color: Color, toEnd: Boolean, size: Dp = 22.dp) = Canvas(Modifier.size(size)) {
+    val w = this.size.width
+    val h = this.size.height
+    val stroke = h * 0.1f
+    // the three list lines, the target one drawn bolder
+    for (i in 0..2) {
+        val y = h * (0.28f + 0.22f * i)
+        val target = if (toEnd) i == 2 else i == 0
+        drawLine(color, Offset(w * 0.5f, y), Offset(w * 0.92f, y), if (target) stroke * 1.6f else stroke * 0.8f, StrokeCap.Round, alpha = if (target) 1f else 0.55f)
+    }
+    // the arrow on the left, pointing up (to the top line) or down (to the bottom line)
+    val x = w * 0.22f
+    val top = h * 0.2f
+    val bottom = h * 0.8f
+    drawLine(color, Offset(x, top), Offset(x, bottom), stroke, StrokeCap.Round)
+    val tip = if (toEnd) bottom else top
+    val dir = if (toEnd) -1f else 1f
+    drawLine(color, Offset(x, tip), Offset(x - w * 0.12f, tip + dir * h * 0.14f), stroke, StrokeCap.Round)
+    drawLine(color, Offset(x, tip), Offset(x + w * 0.12f, tip + dir * h * 0.14f), stroke, StrokeCap.Round)
+}
+
 // ------------------------------------------------------------------ surfaces
 
 /** A card whose gradient slowly drifts: the "now playing" panel. [t] is read in the draw phase only. */
