@@ -8,6 +8,7 @@ import io.ktor.server.application.Application
 import io.ktor.server.application.ApplicationCall
 import io.ktor.server.application.install
 import io.ktor.server.cio.CIO
+import io.ktor.server.engine.connector
 import io.ktor.server.engine.embeddedServer
 import io.ktor.server.request.header
 import io.ktor.server.request.receiveText
@@ -24,6 +25,7 @@ import io.ktor.websocket.CloseReason
 import io.ktor.websocket.Frame
 import io.ktor.websocket.close
 import kotlinx.coroutines.launch
+import kotlin.concurrent.thread
 import org.json.JSONArray
 import org.json.JSONObject
 import kotlin.time.Duration.Companion.seconds
@@ -220,9 +222,29 @@ class PartyServer(
     private val indexHtml = context.assets.open("guest/index.html").bufferedReader().use { it.readText() }
     private var engine: io.ktor.server.engine.EmbeddedServer<*, *>? = null
 
+    /**
+     * Starts listening in the background. Right after the app was killed and reopened the old process can still hold
+     * the port for a moment; failing there must not take the whole app down, so it retries for a while.
+     */
     fun start() {
-        engine = embeddedServer(CIO, port = port, host = "0.0.0.0") { partyModule(party, indexHtml) }.start(wait = false)
-        Log.i("PartyQueue", "server listening on :$port")
+        thread(isDaemon = true, name = "party-server-start") {
+            repeat(40) { attempt ->
+                try {
+                    engine = embeddedServer(
+                        CIO,
+                        configure = {
+                            connector { port = this@PartyServer.port; host = "0.0.0.0" }
+                            reuseAddress = true
+                        },
+                    ) { partyModule(party, indexHtml) }.start(wait = false)
+                    Log.i("PartyQueue", "server listening on :$port")
+                    return@thread
+                } catch (e: Exception) {
+                    Log.w("PartyQueue", "server could not listen on :$port (attempt ${attempt + 1}): $e")
+                    Thread.sleep(1_500)
+                }
+            }
+        }
     }
 
     fun stop() {

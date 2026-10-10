@@ -45,6 +45,10 @@ git tag `v<version>`.
 - Auto-generated YouTube Mixes can be imported from a video page (their songs are read from the page's "up next" list).
 
 ### Fixed
+- Held on its side the app left almost no room for YouTube (the player card filled the screen): in landscape the card now sits
+  on the left (scrollable) and the tabs, including YouTube, use the rest; the YouTube bar below the page is more compact.
+- The app could crash at startup with "Address already in use" when it was reopened right after being closed; the guest
+  server now retries in the background instead of taking the app down.
 - The guest page on a computer no longer jumps sideways when switching between a long and a short tab (the scrollbar's space is always reserved).
 - Some headings were drawn black on the dark background.
 - The guest page did not work (it needed a one-time code from the QR link).

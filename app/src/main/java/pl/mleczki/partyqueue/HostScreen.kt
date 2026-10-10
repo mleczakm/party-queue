@@ -3,6 +3,7 @@ package pl.mleczki.partyqueue
 import android.content.BroadcastReceiver
 import android.content.ClipData
 import android.content.IntentFilter
+import android.content.res.Configuration
 import android.media.AudioManager
 import android.content.ClipboardManager
 import android.content.Context
@@ -40,6 +41,9 @@ import androidx.compose.foundation.gestures.awaitLongPressOrCancellation
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.drag
 import androidx.compose.foundation.gestures.scrollBy
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -117,6 +121,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -213,45 +218,53 @@ fun HostApp(app: PartyApp, themeMode: ThemeMode, initialTab: Int = 0, initialPre
         PartyHeader(themeMode, playing, headerShown, onReveal = { headerShown = true; lastTouch = System.currentTimeMillis() }) { app.cycleTheme() }
 
         // Never under the navigation bar or a camera cut-out; the page itself must also stay clear of the bars.
-        Column(
+        BoxWithConstraints(
             Modifier
                 .weight(1f)
                 .fillMaxWidth()
                 .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom))
         ) {
+            // Held on its side the screen is wide and short: the player card goes to the left, the tabs get the rest.
+            val landscape = maxWidth > maxHeight
+
             // While browsing YouTube the player is parked in a 1dp strip: it keeps playing, but the screen
             // shows a single page instead of two stacked ones.
             val paneHeight = when {
                 tab == BROWSE_TAB && !full -> Preview.Hidden.height!!
+                landscape && preview == Preview.Normal -> 170.dp
                 else -> preview.height
             }
-            Box(if (paneHeight == null) Modifier.fillMaxWidth().weight(1f) else Modifier.fillMaxWidth().height(paneHeight)) {
-                AndroidView(
-                    modifier = Modifier.fillMaxSize(),
-                    factory = { ctx -> GeckoView(ctx).also { it.setSession(visible); app.player.onViewAttached() } },
-                    // The two player pages take turns; show whichever one is playing.
-                    update = { view -> if (view.session !== visible) { view.releaseSession(); view.setSession(visible) } },
-                    onRelease = { it.releaseSession() },
-                )
-            }
-            NowPlaying(state, party, preview) { preview = it }
-            BatteryBanner()
-            AnimatedVisibility(
-                visible = notice != null,
-                enter = expandVertically() + fadeIn(),
-                exit = shrinkVertically() + fadeOut(),
-            ) {
-                var last by remember { mutableStateOf("") }
-                notice?.let { last = it }
-                Row(
-                    Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.errorContainer).padding(horizontal = 14.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(last, Modifier.weight(1f), color = MaterialTheme.colorScheme.onErrorContainer, style = MaterialTheme.typography.bodySmall)
-                    TextButton(onClick = { party.dismissNotice() }) { Text("OK") }
+            val playerPane: @Composable (Modifier) -> Unit = { mod ->
+                Box(mod) {
+                    AndroidView(
+                        modifier = Modifier.fillMaxSize(),
+                        factory = { ctx -> GeckoView(ctx).also { it.setSession(visible); app.player.onViewAttached() } },
+                        // The two player pages take turns; show whichever one is playing.
+                        update = { view -> if (view.session !== visible) { view.releaseSession(); view.setSession(visible) } },
+                        onRelease = { it.releaseSession() },
+                    )
                 }
             }
-            if (!full) {
+            val playerCard: @Composable ColumnScope.() -> Unit = {
+                NowPlaying(state, party, preview) { preview = it }
+                BatteryBanner()
+                AnimatedVisibility(
+                    visible = notice != null,
+                    enter = expandVertically() + fadeIn(),
+                    exit = shrinkVertically() + fadeOut(),
+                ) {
+                    var last by remember { mutableStateOf("") }
+                    notice?.let { last = it }
+                    Row(
+                        Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.errorContainer).padding(horizontal = 14.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(last, Modifier.weight(1f), color = MaterialTheme.colorScheme.onErrorContainer, style = MaterialTheme.typography.bodySmall)
+                        TextButton(onClick = { party.dismissNotice() }) { Text("OK") }
+                    }
+                }
+            }
+            val tabsArea: @Composable ColumnScope.() -> Unit = {
                 PartyTabs(
                     labels = listOf("Kolejka", "Propozycje", "Zaproś", "YouTube"),
                     badges = listOf(0, proposalCount, requestCount, 0),
@@ -278,6 +291,22 @@ fun HostApp(app: PartyApp, themeMode: ThemeMode, initialTab: Int = 0, initialPre
                             else -> BrowseTab(app, party)
                         }
                     }
+                }
+            }
+
+            if (landscape && !full) {
+                Row(Modifier.fillMaxSize()) {
+                    Column(Modifier.width(360.dp).fillMaxHeight().verticalScroll(rememberScrollState())) {
+                        playerPane(Modifier.fillMaxWidth().height(paneHeight ?: Preview.Normal.height!!))
+                        playerCard()
+                    }
+                    Column(Modifier.weight(1f).fillMaxHeight(), content = tabsArea)
+                }
+            } else {
+                Column(Modifier.fillMaxSize()) {
+                    playerPane(if (paneHeight == null) Modifier.fillMaxWidth().weight(1f) else Modifier.fillMaxWidth().height(paneHeight))
+                    playerCard()
+                    if (!full) tabsArea()
                 }
             }
         }
@@ -1091,7 +1120,7 @@ private fun BrowseTab(app: PartyApp, party: PartyController) {
             onRelease = { it.releaseSession() },
         )
         Surface(tonalElevation = 3.dp, color = MaterialTheme.colorScheme.surfaceContainerHigh) {
-            Column(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Column(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 4.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 if (listId != null) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Switch(shuffle, { shuffle = it }, Modifier.scale(0.85f))
@@ -1116,17 +1145,18 @@ private fun BrowseTab(app: PartyApp, party: PartyController) {
                         }, enabled = !busy, modifier = Modifier.weight(1f)) { Text("Jako następny") }
                     }
                 }
-                if (listId == null && videoId == null) {
-                    Text(
-                        "Znajdź playlistę lub film. Na stronie playlisty pojawi się przycisk ustawienia jej jako aktualnej.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
                 AnimatedVisibility(message != null) {
                     Text(message.orEmpty(), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (listId == null && videoId == null && LocalConfiguration.current.orientation != Configuration.ORIENTATION_LANDSCAPE) {
+                        Text(
+                            "Znajdź playlistę lub film. Na stronie playlisty pojawi się przycisk ustawienia jej jako aktualnej.",
+                            Modifier.weight(1f),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
                     TextButton(onClick = { pasteOpen = true }, contentPadding = PaddingValues(horizontal = 4.dp)) { Text("Wklej link") }
                     if (!signedIn) {
                         TextButton(

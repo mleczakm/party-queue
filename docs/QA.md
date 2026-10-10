@@ -106,6 +106,8 @@ Use a real phone, not an emulator. Note the phone model and Android version in t
 - [ ] A removed guest is logged out at once.
 
 **Interface**
+- [ ] Rotate the phone to landscape: the player card is on the left, the tabs on the right; the YouTube tab shows a usable page.
+- [ ] Close the app and reopen it at once, several times: it never crashes and the guest page keeps answering.
 - [ ] The preview button next to ⏭ cycles: crossed-out screen (no preview, the default) → empty screen (small) → full screen.
 - [ ] The title bar disappears after ~8 s without touching; the status-bar strip and a small handle stay; dragging down or tapping the handle brings it back.
 - [ ] *Dodaj do kolejki* in the YouTube tab puts the song at the end of the queue.
