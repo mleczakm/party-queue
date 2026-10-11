@@ -65,9 +65,13 @@ jobs:
           apk="party-queue-${version}.apk"
           cp app/build/outputs/apk/release/app-release.apk "$apk"
           sha256sum "$apk" > "$apk.sha256"
+          # A copy with a fixed name: releases/latest/download/party-queue.apk (and the QR codes on the website) always
+          # point at the newest version.
+          cp "$apk" party-queue.apk
+          sha256sum party-queue.apk > party-queue.apk.sha256
           awk -v v="$version" '$0 ~ "^## \\[" v "\\]" {on=1; next} /^## \[/ {on=0} on' CHANGELOG.md > notes.md
           {
             echo
             echo "> This APK is signed with the project's own debug-grade key so it can be sideloaded (Android 10+, arm64) and installs over builds made on the maintainer's computer; it is not a Play Store build. Verify the download against the attached .sha256 file."
           } >> notes.md
-          gh release create "$GITHUB_REF_NAME" "$apk" "$apk.sha256" --title "Party Queue $version" --notes-file notes.md
+          gh release create "$GITHUB_REF_NAME" "$apk" "$apk.sha256" party-queue.apk party-queue.apk.sha256 --title "Party Queue $version" --notes-file notes.md
