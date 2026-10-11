@@ -53,6 +53,17 @@ Korzystanie z aplikacji może naruszać regulamin YouTube – robisz to na włas
 
 ## Zrzuty ekranu
 
+Aplikacja gospodarza:
+
+<p>
+<img src="docs/screenshots/app-queue.jpg" alt="Kolejka" width="23%"> <img src="docs/screenshots/app-search.jpg" alt="Wyszukiwanie z przyciskami następna / na koniec" width="23%"> <img src="docs/screenshots/app-proposals.jpg" alt="Propozycje" width="23%"> <img src="docs/screenshots/app-invite.jpg" alt="Zaproś: kod QR" width="23%">
+</p>
+<p>
+<img src="docs/screenshots/app-youtube.jpg" alt="Karta YouTube" width="23%"> <img src="docs/screenshots/app-panel.jpg" alt="Panel + dla playlisty" width="23%"> <img src="docs/screenshots/app-panel-video.jpg" alt="Panel + dla filmu" width="23%"> <img src="docs/screenshots/app-light.jpg" alt="Motyw jasny" width="23%">
+</p>
+
+Strona, którą widzą goście i współhostowie:
+
 | | |
 | --- | --- |
 | ![Strona hosta, motyw jasny](docs/screenshots/web-queue-light.jpg) | ![Propozycje na stronie hosta](docs/screenshots/web-proposals.jpg) |

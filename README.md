@@ -53,6 +53,17 @@ Requires Android 10 or newer (API 29), arm64. Licence: [AGPL-3.0](LICENSE); bund
 
 ## Screenshots
 
+The host's app:
+
+<p>
+<img src="docs/screenshots/app-queue.jpg" alt="Queue" width="23%"> <img src="docs/screenshots/app-search.jpg" alt="Search with next / end buttons" width="23%"> <img src="docs/screenshots/app-proposals.jpg" alt="Proposals" width="23%"> <img src="docs/screenshots/app-invite.jpg" alt="Invite: the QR code" width="23%">
+</p>
+<p>
+<img src="docs/screenshots/app-youtube.jpg" alt="YouTube tab" width="23%"> <img src="docs/screenshots/app-panel.jpg" alt="The + panel for a playlist" width="23%"> <img src="docs/screenshots/app-panel-video.jpg" alt="The + panel for a video" width="23%"> <img src="docs/screenshots/app-light.jpg" alt="Light theme" width="23%">
+</p>
+
+The page guests and co-hosts see:
+
 | | |
 | --- | --- |
 | ![Host page, light theme](docs/screenshots/web-queue-light.jpg) | ![Proposals on the host page](docs/screenshots/web-proposals.jpg) |
