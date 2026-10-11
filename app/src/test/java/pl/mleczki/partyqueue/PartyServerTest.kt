@@ -93,6 +93,22 @@ class PartyServerTest {
     }
 
     @Test
+    fun `an approved proposal can be placed next or at the end`() = server {
+        val token = join()["token"] as String
+        listOf(1, 2, 3).forEach { party.enqueue(meta(it), "Host", Source.HOST, atEnd = true) } // 1 plays, 2 and 3 wait
+        val host = party.hostGuest.token
+        for ((song, place) in listOf(7 to "end", 8 to "next")) {
+            party.yt.let { (it as FakeSource).add(meta(song)) }
+            call("/api/propose", token, """{"videoId":"${meta(song).videoId}"}""")
+            val id = JSONObject(call("/api/state", host).bodyAsText()).getJSONArray("proposals").getJSONObject(0).getString("id")
+            assertEquals(HttpStatusCode.OK, call("/api/proposals/$id/approve", host, """{"place":"$place"}""").status)
+        }
+        val queue = party.state.value.queue.map { it.videoId }
+        assertEquals(meta(8).videoId, queue.first())
+        assertEquals(meta(7).videoId, queue.last())
+    }
+
+    @Test
     fun `proposals accept links and reject nonsense`() = server {
         val token = join()["token"] as String
         val link = "https://www.youtube.com/watch?v=${meta(2).videoId}"

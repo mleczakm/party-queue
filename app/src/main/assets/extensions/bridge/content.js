@@ -88,7 +88,15 @@
 
   let video = null;
   let lastTick = 0;
+  // A pause that the app asked for must stay. The "Play YouTube Video in Background" add-on resumes any pause it did not
+  // see a person cause (its recovery loop), so the state is also published as a DOM attribute, which both add-ons share;
+  // fetch-addons.sh patches the add-on to respect it.
   let hostPaused = false;
+  function setHostPaused(v) {
+    hostPaused = v;
+    const root = document.documentElement;
+    if (root) { if (v) root.setAttribute("data-pq-host-paused", "1"); else root.removeAttribute("data-pq-host-paused"); }
+  }
   // A standby page loads its song and then waits, silent and paused, until the app activates it.
   let standby = params.has("standby");
   let announced = "";
@@ -233,7 +241,7 @@
       const api = el && el.wrappedJSObject;
       if (!api || typeof api.loadVideoById !== "function") throw new Error("no player api");
       standby = !!asStandby;
-      hostPaused = standby;
+      setHostPaused(standby);
       announced = "";
       freshLoadPending = true;
       stopRamp();
@@ -256,7 +264,7 @@
     switch (cmd.cmd) {
       case "activate": // the app switches to this page: the prepared song starts now (cmd.fade ms: fading in)
         standby = false;
-        hostPaused = false;
+        setHostPaused(false);
         stopRamp();
         video.muted = false;
         video.currentTime = 0;
@@ -267,14 +275,14 @@
       case "fadeOut": { // ... or it fades away under the next one first
         const finish = () => {
           standby = true;
-          hostPaused = true;
+          setHostPaused(true);
           announced = "";
           video.pause();
           video.muted = true;
           video.volume = 1;
         };
         if (cmd.cmd === "fadeOut" && cmd.fade > 0) {
-          hostPaused = true; // the page must not resume it while it fades
+          setHostPaused(true); // the page must not resume it while it fades
           ramp(video, -1, cmd.fade, finish);
         } else {
           stopRamp();
@@ -282,8 +290,8 @@
         }
         break;
       }
-      case "play": hostPaused = false; video.play().catch(() => {}); break;
-      case "pause": hostPaused = true; video.pause(); break;
+      case "play": setHostPaused(false); video.play().catch(() => {}); break;
+      case "pause": setHostPaused(true); video.pause(); break;
       case "seek": video.currentTime = (cmd.arg || 0) / 1000; break;
       case "stop": video.pause(); break;
     }

@@ -177,6 +177,8 @@ fun HostApp(app: PartyApp, themeMode: ThemeMode, initialTab: Int = 0, initialPre
     val state = party.state.collectAsStateWithLifecycle()
     val notice by remember { derivedStateOf { state.value.notice } }
     val playing by remember { derivedStateOf { state.value.player.status == "playing" } }
+    val keepAwake by app.keepAwake.collectAsStateWithLifecycle()
+    val loadProblem by remember { derivedStateOf { state.value.loadProblem } }
     val proposalCount by remember { derivedStateOf { state.value.proposals.size } }
     val requestCount by remember { derivedStateOf { state.value.guests.count { it.hostRequested } } }
     val visible by app.player.visibleSession.collectAsStateWithLifecycle()
@@ -251,6 +253,16 @@ fun HostApp(app: PartyApp, themeMode: ThemeMode, initialTab: Int = 0, initialPre
             val playerCard: @Composable ColumnScope.() -> Unit = {
                 NowPlaying(state, party, preview) { preview = it }
                 BatteryBanner()
+                AnimatedVisibility(loadProblem != null, enter = expandVertically() + fadeIn(), exit = shrinkVertically() + fadeOut()) {
+                    var last by remember { mutableStateOf("") }
+                    loadProblem?.let { last = it }
+                    Text(
+                        last,
+                        Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.tertiaryContainer).padding(horizontal = 14.dp, vertical = 8.dp),
+                        color = MaterialTheme.colorScheme.onTertiaryContainer,
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
                 AnimatedVisibility(
                     visible = notice != null,
                     enter = expandVertically() + fadeIn(),
@@ -290,7 +302,7 @@ fun HostApp(app: PartyApp, themeMode: ThemeMode, initialTab: Int = 0, initialPre
                         when (target) {
                             0 -> QueueTab(state, party) { searchOpen = true }
                             1 -> ProposalsTab(state, party)
-                            2 -> InviteTab(state, party, app.server.port)
+                            2 -> InviteTab(state, party, app.server.port, keepAwake) { app.setKeepAwake(it) }
                             else -> BrowseTab(app, party)
                         }
                     }
@@ -426,7 +438,7 @@ private fun NowPlaying(state: State<Snapshot>, party: PartyController, preview: 
         Modifier
             .padding(horizontal = 12.dp, vertical = 8.dp)
             .fillMaxWidth()
-            .flowingGradient(listOf(Brand.Pink, Brand.Violet, Brand.Blue, Brand.Violet), RoundedCornerShape(24.dp))
+            .flowingGradient(listOf(Brand.Pink, Brand.Violet, Brand.Blue, Brand.Violet), RoundedCornerShape(24.dp), animate = playing)
     ) {
         Column(Modifier.padding(horizontal = 14.dp, vertical = 12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -911,15 +923,21 @@ private fun ProposalsTab(state: State<Snapshot>, party: PartyController) {
         EmptyState("Brak propozycji", "Gdy ktoś z gości zaproponuje utwór, pojawi się tutaj do zatwierdzenia.")
         return
     }
-    LazyColumn(
-        Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(12.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        itemsIndexed(proposals, key = { _, p -> p.id }) { _, p ->
-            TrackCard(p.meta.title, "${p.byName} · ${p.meta.channel}", p.meta.videoId, Modifier.animateItem()) {
-                TextButton(onClick = { party.reject(p.id) }, contentPadding = PaddingValues(horizontal = 8.dp)) { Text("Odrzuć") }
-                GradientButton("Zatwierdź", { party.approve(p.id) }, brush = Brush.horizontalGradient(listOf(Brand.Violet, Brand.Blue)))
+    Column(Modifier.fillMaxSize()) {
+        PlaceLegend()
+        LazyColumn(
+            Modifier.weight(1f).fillMaxWidth(),
+            contentPadding = PaddingValues(start = 12.dp, end = 12.dp, bottom = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            itemsIndexed(proposals, key = { _, p -> p.id }) { _, p ->
+                TrackCard(p.meta.title, "${p.byName} · ${p.meta.channel}", p.meta.videoId, Modifier.animateItem()) {
+                    Box(Modifier.size(40.dp).clip(CircleShape).clickable { party.reject(p.id) }, contentAlignment = Alignment.Center) {
+                        CloseGlyph(MaterialTheme.colorScheme.error, 20.dp)
+                    }
+                    PlaceButton(toEnd = false, chosen = false) { party.approve(p.id, next = true) }
+                    PlaceButton(toEnd = true, chosen = false) { party.approve(p.id, next = false) }
+                }
             }
         }
     }
@@ -940,7 +958,7 @@ private fun QrCode(text: String, modifier: Modifier) {
 }
 
 @Composable
-private fun InviteTab(state: State<Snapshot>, party: PartyController, port: Int) {
+private fun InviteTab(state: State<Snapshot>, party: PartyController, port: Int, keepAwake: Boolean, onKeepAwake: (Boolean) -> Unit) {
     val joinOpen by remember { derivedStateOf { state.value.joinOpen } }
     val guests by remember { derivedStateOf { state.value.guests } }
     val online by remember { derivedStateOf { state.value.online } }
@@ -1031,6 +1049,20 @@ private fun InviteTab(state: State<Snapshot>, party: PartyController, port: Int)
                         )
                     }
                     Switch(joinOpen, { party.setJoinOpen(it) })
+                }
+            }
+        }
+        item {
+            Surface(shape = MaterialTheme.shapes.medium, color = MaterialTheme.colorScheme.surfaceContainer) {
+                Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text("Nie wygaszaj ekranu", style = MaterialTheme.typography.bodyMedium)
+                        Text(
+                            "Zużywa dużo baterii; muzyka gra też przy zgaszonym ekranie.",
+                            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    Switch(keepAwake, onKeepAwake)
                 }
             }
         }

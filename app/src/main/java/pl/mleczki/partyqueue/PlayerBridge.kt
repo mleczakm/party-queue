@@ -43,6 +43,9 @@ class PlayerBridge(private val context: Context, private val runtime: GeckoRunti
 
     var party: PartyController? = null
 
+    private val diagnosis = NetworkDiagnosis(context)
+    private var lastLoadError: String? = null
+
     private val main = Handler(Looper.getMainLooper())
     private var port: WebExtension.Port? = null
     private var ready = false
@@ -102,6 +105,17 @@ class PlayerBridge(private val context: Context, private val runtime: GeckoRunti
                     if (autoplay) GeckoSession.PermissionDelegate.ContentPermission.VALUE_ALLOW
                     else GeckoSession.PermissionDelegate.ContentPermission.VALUE_DENY
                 )
+            }
+        }
+        s.navigationDelegate = object : GeckoSession.NavigationDelegate {
+            override fun onLoadError(
+                session: GeckoSession,
+                uri: String?,
+                error: org.mozilla.geckoview.WebRequestError,
+            ): GeckoResult<String>? {
+                Log.w(TAG, "page load failed: $uri category=${error.category} code=${error.code}")
+                lastLoadError = "błąd ${error.code}"
+                return null
             }
         }
         s.open(runtime)
@@ -229,8 +243,22 @@ class PlayerBridge(private val context: Context, private val runtime: GeckoRunti
         active.session.loadUri("http://127.0.0.1:${PartyServer.PORT}/idle")
     }
 
+    /** A song that has not started after a while: say why (no internet, data saver, Doze...) instead of staying silent. */
+    private fun watchStall(videoId: String) {
+        main.postDelayed({ checkStall(videoId) }, STALL_MS)
+    }
+
+    private fun checkStall(videoId: String) {
+        val p = party ?: return
+        if (p.currentVideoId() != videoId || p.state.value.player.status != "loading") return
+        p.setLoadProblem(diagnosis.reason(lastLoadError))
+        main.postDelayed({ checkStall(videoId) }, STALL_RECHECK_MS)
+    }
+
     override fun load(videoId: String, fadeMs: Int) {
+        lastLoadError = null
         main.post {
+            watchStall(videoId)
             if (!ready) {
                 pendingVideo = videoId
                 return@post
@@ -342,6 +370,11 @@ class PlayerBridge(private val context: Context, private val runtime: GeckoRunti
     }
 
     override fun command(cmd: String, arg: Double) {
+        if (cmd == "release") {
+            // Long pause: let the pages go (they idle at about a fifth of a core); the song reloads on resume.
+            main.post { if (ready) showIdle() }
+            return
+        }
         if (cmd == "stop") {
             main.post {
                 wantedPreload = null
@@ -410,6 +443,8 @@ class PlayerBridge(private val context: Context, private val runtime: GeckoRunti
         const val TAG = "PartyQueue"
         const val IN_PLACE_TIMEOUT_MS = 12_000L
         private const val FADE_WAIT_MS = 25_000L
+        private const val STALL_MS = 20_000L
+        private const val STALL_RECHECK_MS = 10_000L
         const val YOUTUBE_HOME = "https://m.youtube.com/"
     }
 }

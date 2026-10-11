@@ -76,6 +76,51 @@ class PartyControllerTest {
         assertEquals(0, r.player.fades.last())
     }
 
+    // ------------------------------------------------------------ long pause
+
+    @Test
+    fun `a long pause releases the player and resuming reloads the song at the same place`() = runTest {
+        val r = rig()
+        r.party.enqueue(meta(1), "Host", Source.HOST)
+        r.party.onPlayerMessage(msg("state", meta(1).videoId, "playing", pos = 5_000))
+        r.party.onPlayerMessage(msg("state", meta(1).videoId, "paused", pos = 42_000))
+        advanceTimeBy(PartyController.PAUSE_RELEASE_MS - 1_000); runCurrent()
+        assertFalse(r.player.commands.any { it.first == "release" })
+        advanceTimeBy(2_000); runCurrent()
+        assertTrue(r.player.commands.any { it.first == "release" })
+
+        val loadsBefore = r.player.loads.size
+        r.party.togglePlay() // resume
+        assertEquals(loadsBefore + 1, r.player.loads.size)
+        assertEquals("loading", r.state().player.status)
+        r.party.onPlayerMessage(msg("state", meta(1).videoId, "playing", pos = 0))
+        assertEquals("seek" to 42_000.0, r.player.commands.last())
+    }
+
+    @Test
+    fun `a short pause keeps the player and play just resumes it`() = runTest {
+        val r = rig()
+        r.party.enqueue(meta(1), "Host", Source.HOST)
+        r.party.onPlayerMessage(msg("state", meta(1).videoId, "playing", pos = 5_000))
+        r.party.onPlayerMessage(msg("state", meta(1).videoId, "paused", pos = 6_000))
+        advanceTimeBy(5 * 60_000L); runCurrent()
+        r.party.togglePlay()
+        assertEquals("play", r.player.commands.last().first)
+        assertEquals(1, r.player.loads.size)
+    }
+
+    // ------------------------------------------------------------ load problems
+
+    @Test
+    fun `a load problem is shown until the song plays`() = runTest {
+        val r = rig()
+        r.party.enqueue(meta(1), "Host", Source.HOST)
+        r.party.setLoadProblem("Brak połączenia z internetem.")
+        assertEquals("Brak połączenia z internetem.", r.state().loadProblem)
+        r.party.onPlayerMessage(msg("state", meta(1).videoId, "playing"))
+        assertNull(r.state().loadProblem)
+    }
+
     // ------------------------------------------------------------ adding
 
     @Test

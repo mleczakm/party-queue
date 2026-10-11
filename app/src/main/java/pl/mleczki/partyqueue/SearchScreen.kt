@@ -143,13 +143,7 @@ fun SearchDialog(party: PartyController, onDismiss: () -> Unit) {
                     Spacer(Modifier.width(8.dp))
                     GradientButton("Szukaj", { search() }, enabled = !busy && query.isNotBlank())
                 }
-                // What the two icons mean.
-                Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp), horizontalArrangement = Arrangement.spacedBy(18.dp), verticalAlignment = Alignment.CenterVertically) {
-                    QueuePlaceGlyph(MaterialTheme.colorScheme.primary, toEnd = false)
-                    Text("jako następna", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    QueuePlaceGlyph(MaterialTheme.colorScheme.primary, toEnd = true)
-                    Text("na koniec kolejki", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
+                PlaceLegend()
                 if (busy) Text("Szukam…", Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.primary)
                 message?.let { Text(it, Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.error) }
                 LazyColumn(
@@ -189,8 +183,19 @@ fun SearchDialog(party: PartyController, onDismiss: () -> Unit) {
     }
 }
 
+/** What the two arrow icons mean. */
 @Composable
-private fun PlaceButton(toEnd: Boolean, chosen: Boolean, onClick: () -> Unit) {
+fun PlaceLegend(modifier: Modifier = Modifier) {
+    Row(modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp), horizontalArrangement = Arrangement.spacedBy(18.dp), verticalAlignment = Alignment.CenterVertically) {
+        QueuePlaceGlyph(MaterialTheme.colorScheme.primary, toEnd = false)
+        Text("jako następna", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        QueuePlaceGlyph(MaterialTheme.colorScheme.primary, toEnd = true)
+        Text("na koniec kolejki", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+}
+
+@Composable
+fun PlaceButton(toEnd: Boolean, chosen: Boolean, onClick: () -> Unit) {
     Box(
         Modifier
             .size(46.dp)

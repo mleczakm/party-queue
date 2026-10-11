@@ -105,6 +105,8 @@
   .t { font-weight:600; overflow:hidden; text-overflow:ellipsis; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; }
   .s { color:var(--muted); font-size:12.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:1px; }
   .acts { display:flex; gap:4px; align-items:center; flex:none; }
+  .legend svg.i { color:var(--accent); } .legend { display:flex; align-items:center; gap:6px; margin:0 4px 10px; font-size:13px; }
+  .ib.go, .ib.bad { width:38px; height:38px; } .ib.go svg.i, .ib.bad svg.i { width:1.5em; height:1.5em; }
   .rowact { opacity:0; transition:opacity .15s; }
   .item:hover .rowact, .item.sel .rowact, .item:focus-within .rowact { opacity:1; }
   @media (hover:none) { .rowact { opacity:1; } }
@@ -359,6 +361,14 @@
   // ------------------------------------------------------------------ rendering
   // Updates arrive every second (playback position). Sections are rebuilt only when their own data changed,
   // so hovering, focus, text being typed and scroll positions survive.
+  // The server sends the position only every few seconds; the page keeps time itself in between.
+  let clock = { pos: 0, dur: 0, at: 0, playing: false };
+  function paintClock() {
+    const pos = clock.playing ? Math.min(clock.dur || Infinity, clock.pos + Date.now() - clock.at) : clock.pos;
+    $('npPos').textContent = fmt(pos); $('npDur').textContent = fmt(clock.dur);
+    $('npBar').style.width = clock.dur ? Math.min(100, pos / clock.dur * 100) + '%' : '0';
+  }
+  setInterval(() => { if (clock.playing && !document.hidden) paintClock(); }, 1000);
   const sigs = {};
   function section(key, data, build) {
     const sig = JSON.stringify(data);
@@ -395,8 +405,8 @@
     $('npSub').append(el('span', { class: 'eq', html: '<i></i><i></i><i></i>' }),
       !tr ? (state.playlist ? 'Playlista: ' + state.playlist : 'Poproś hosta o playlistę') :
       now.status === 'loading' ? 'Ładowanie…' : now.status === 'ad' ? 'Reklama' : [tr.channel, tr.by && tr.src !== 'PLAYLIST' ? 'od: ' + tr.by : ''].filter(Boolean).join(' · '));
-    $('npPos').textContent = fmt(now.pos); $('npDur').textContent = fmt(now.dur);
-    $('npBar').style.width = now.dur ? Math.min(100, now.pos / now.dur * 100) + '%' : '0';
+    clock = { pos: now.pos, dur: now.dur, at: Date.now(), playing: now.status === 'playing' };
+    paintClock();
     $('npTrack').classList.toggle('seek', host);
     $('npHint').hidden = !host;
     $('hostCtl').hidden = !host;
@@ -406,7 +416,7 @@
     $('bRepeat').innerHTML = icon('repeat'); $('bRepeat').classList.toggle('on', !!state.repeat);
     $('bRepeat').setAttribute('aria-pressed', !!state.repeat);
     $('bPrev').innerHTML = icon('prev'); $('bNext').innerHTML = icon('next');
-    const nb = $('notice'); nb.textContent = state.notice || ''; nb.hidden = !state.notice;
+    const nb = $('notice'); const warn = state.notice || state.problem || ''; nb.textContent = warn; nb.hidden = !warn;
 
     // tabs
     const tabs = tabsFor();
@@ -547,8 +557,8 @@
     if (results.length) {
       w.append(el('div', { class: 'list', style: 'margin-top:12px' }, results.map((m) => trackItem(m, [m.channel, m.dur].filter(Boolean).join(' · '),
         el('div', { class: 'acts' },
-          host ? el('button', { class: 'btn sm', html: icon('qnext'), on: { click: () => propose(m, true) }, title: 'Dodaj jako następną (na początek kolejki)', 'aria-label': 'Dodaj jako następną' }, 'Następna') : null,
-          el('button', { class: 'btn primary sm', html: icon(host ? 'qend' : 'send'), on: { click: () => propose(m, false) }, title: host ? 'Dodaj na koniec kolejki' : 'Zaproponuj hostowi', 'aria-label': host ? 'Dodaj na koniec kolejki' : 'Zaproponuj' }, host ? 'Na koniec' : 'Zaproponuj'))))));
+          host ? [ibtn('qnext', 'Dodaj jako następną (na początek kolejki)', () => propose(m, true), 'go'), ibtn('qend', 'Dodaj na koniec kolejki', () => propose(m, false), 'go')]
+               : el('button', { class: 'btn primary sm', html: icon('send'), on: { click: () => propose(m, false) }, title: 'Zaproponuj hostowi' }, 'Zaproponuj'))))));
     } else {
       w.append(el('p', { class: 'muted', style: 'margin:14px 4px' }, host ? 'Jako host dodajesz utwory od razu: strzałka w górę – jako następną, strzałka w dół – na koniec kolejki.' : 'Host zatwierdzi Twoją propozycję, zanim trafi do kolejki.'));
     }
@@ -566,9 +576,13 @@
   function proposalsView() {
     const p = state.proposals;
     if (!p.length) return empty('Brak propozycji', 'Gdy ktoś zaproponuje utwór, zobaczysz go tutaj.');
-    return el('div', { class: 'list' }, p.map((x) => trackItem(x, x.by + ' · ' + (x.channel || ''), el('div', { class: 'acts' },
-      btn('close', 'Odrzuć', () => act('/api/proposals/' + x.id + '/reject'), 'sm'),
-      btn('check', 'Zatwierdź', () => act('/api/proposals/' + x.id + '/approve'), 'primary sm')))));
+    const place = (x, where) => act('/api/proposals/' + x.id + '/approve', { place: where }, where === 'next' ? 'Zagra jako następna' : 'Dodano na koniec kolejki');
+    return el('div', {},
+      el('p', { class: 'muted legend', html: icon('qnext') + ' jako następna &nbsp;&nbsp; ' + icon('qend') + ' na koniec kolejki' }),
+      el('div', { class: 'list' }, p.map((x) => trackItem(x, x.by + ' · ' + (x.channel || ''), el('div', { class: 'acts' },
+        ibtn('close', 'Odrzuć', () => act('/api/proposals/' + x.id + '/reject'), 'bad'),
+        ibtn('qnext', 'Zatwierdź: zagraj jako następną', () => place(x, 'next'), 'go'),
+        ibtn('qend', 'Zatwierdź: dodaj na koniec kolejki', () => place(x, 'end'), 'go'))))));
   }
 
   function guestsView() {

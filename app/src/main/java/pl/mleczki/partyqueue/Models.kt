@@ -64,6 +64,8 @@ data class Snapshot(
     val notice: String? = null,
     /** The phone's media volume in percent; -1 when unknown. */
     val volume: Int = -1,
+    /** Why the current song is not loading (set after a while, cleared when it plays). */
+    val loadProblem: String? = null,
 )
 
 private val rng = SecureRandom()

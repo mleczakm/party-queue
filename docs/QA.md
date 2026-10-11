@@ -65,6 +65,16 @@ Use a real phone, not an emulator. Note the phone model and Android version in t
 - [ ] The up-arrow button adds the song as the next one (it becomes the first row), the down-arrow button adds it to the end; the result shows which was chosen; adding several in a row works.
 - [ ] Same on the guest page as a host (search tab: *Następna* / *Na koniec*); as a plain guest only *Zaproponuj* is shown.
 
+**Pause and power**
+- [ ] Pause from the app and from the guest page: the song stays paused for at least 5 minutes (no self-resume).
+- [ ] Pause for 10+ minutes, then press play: the same song loads and continues from where it stopped.
+- [ ] With the screen off and music playing, `adb shell dumpsys power` lists the `partyqueue:playback` wake lock; ~1.5 minutes after the music stops (and no guest page is open) it is gone.
+- [ ] The screen goes off by itself unless *Nie wygaszaj ekranu* is on (Zaproś tab).
+- [ ] No stutter with the screen off for several songs (Gecko now suspends background video decoding).
+
+**Slow loading**
+- [ ] Turn Wi-Fi/data off, start a song: after ~20 s a message explains there is no connection (app and guest page); it disappears when the song plays.
+
 **Fading**
 - [ ] Press ⏭ while a song plays: the old song fades out over ~2 s as the next one fades in (no gap, no jump in loudness).
   Same for ⏮ and for swiping a row right. When a song ends by itself the next one starts at once, without a fade.
@@ -96,6 +106,7 @@ Use a real phone, not an emulator. Note the phone model and Android version in t
 - [ ] The layout uses two columns (player on the left, tabs on the right) and scales to a wide window.
 - [ ] As a host: Space pauses, N / P skip, ↑ ↓ select a song, Enter plays it, T moves it to the top, Delete removes it,
   Alt+↑/↓ moves it, R toggles repeat, / opens search, 1-5 switch tabs, D changes the theme, ? lists the shortcuts.
+- [ ] Approving a proposal: the up-arrow button queues it as the next song, the down-arrow button at the end (app and guest page).
 - [ ] As a host: the volume slider in the player card changes the phone's volume; pressing the phone's volume keys moves the slider; `+`/`−` and `M` work; guests see no slider.
 - [ ] Rows can be dragged with the mouse; double-click plays a song; buttons show tooltips with their shortcut.
 - [ ] As a guest only the shortcuts that apply (search, tabs, theme, help) do anything.

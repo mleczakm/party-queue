@@ -341,9 +341,13 @@ fun QueuePlaceGlyph(color: Color, toEnd: Boolean, size: Dp = 22.dp) = Canvas(Mod
 // ------------------------------------------------------------------ surfaces
 
 /** A card whose gradient slowly drifts: the "now playing" panel. [t] is read in the draw phase only. */
-fun Modifier.flowingGradient(colors: List<Color>, shape: Shape): Modifier = composed {
-    val transition = rememberInfiniteTransition(label = "flow")
-    val t by transition.animateFloat(0f, 1f, infiniteRepeatable(tween(14_000, easing = LinearEasing), RepeatMode.Reverse), "t")
+fun Modifier.flowingGradient(colors: List<Color>, shape: Shape, animate: Boolean = true): Modifier = composed {
+    // An endless animation redraws the card on every frame; it runs only while music plays (saves battery).
+    val t = if (animate) {
+        val transition = rememberInfiniteTransition(label = "flow")
+        val flowing by transition.animateFloat(0f, 1f, infiniteRepeatable(tween(14_000, easing = LinearEasing), RepeatMode.Reverse), "t")
+        flowing
+    } else 0.35f
     this
         .clip(shape)
         .drawBehind {

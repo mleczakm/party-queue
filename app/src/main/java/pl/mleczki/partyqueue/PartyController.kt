@@ -50,6 +50,11 @@ class PartyController(
     private var playlistTracks: List<Meta> = emptyList()
     private var shuffle = false
     private var watchdog: Job? = null
+
+    /** After a long pause the player pages are released to save battery; the song is then reloaded at this position. */
+    private var pauseJob: Job? = null
+    private var releasedAtMs: Long? = null
+    private var seekAfterLoadMs: Long? = null
     private val onlineCounts = HashMap<String, Int>()
 
     init {
@@ -174,10 +179,11 @@ class PartyController(
         _state.update { it.copy(proposals = it.proposals + p) }
     }
 
-    fun approve(proposalId: String) {
+    /** [next] true: plays next, false: goes to the end of the queue, null: behind other requests, before the playlist. */
+    fun approve(proposalId: String, next: Boolean? = null) {
         val p = _state.value.proposals.firstOrNull { it.id == proposalId } ?: return
         _state.update { it.copy(proposals = it.proposals.filterNot { x -> x.id == proposalId }) }
-        enqueue(p.meta, p.byName, Source.GUEST)
+        enqueue(p.meta, p.byName, Source.GUEST, playNext = next == true, atEnd = next == false)
     }
 
     fun reject(proposalId: String) {
@@ -349,6 +355,10 @@ class PartyController(
     }
 
     private fun launchTrack(t: Track, fade: Boolean = false) {
+        setLoadProblem(null)
+        pauseJob?.cancel()
+        releasedAtMs = null
+        seekAfterLoadMs = null
         player?.load(t.videoId, if (fade) FADE_MS else 0)
         watchdog?.cancel()
         watchdog = scope.launch {
@@ -365,12 +375,25 @@ class PartyController(
             next()
             return
         }
+        val released = releasedAtMs
+        val cur = _state.value.current
+        if (released != null && cur != null && _state.value.player.status == "paused") {
+            // The pages were let go after a long pause: load the song again and continue where it stopped.
+            _state.update { it.copy(player = it.player.copy(status = "loading")) }
+            launchTrack(cur)
+            seekAfterLoadMs = released
+            return
+        }
         player?.command(if (_state.value.player.status == "playing") "pause" else "play")
     }
 
     fun seek(ms: Long) = player?.command("seek", ms.toDouble())
 
     fun currentVideoId(): String? = _state.value.current?.videoId
+
+    fun setLoadProblem(text: String?) {
+        _state.update { if (it.loadProblem == text) it else it.copy(loadProblem = text) }
+    }
 
     fun dismissNotice() = _state.update { it.copy(notice = null) }
 
@@ -398,9 +421,26 @@ class PartyController(
                     else -> "loading"
                 }
                 _state.update {
-                    it.copy(player = PlayerInfo(status, m.optLong("pos"), m.optLong("dur")))
+                    it.copy(
+                        player = PlayerInfo(status, m.optLong("pos"), m.optLong("dur")),
+                        loadProblem = if (status == "playing" || status == "paused") null else it.loadProblem,
+                    )
                 }
-                if (st == "playing" && !ad) watchdog?.cancel()
+                if (st == "playing" && !ad) {
+                    watchdog?.cancel()
+                    seekAfterLoadMs?.let { at -> seekAfterLoadMs = null; player?.command("seek", at.toDouble()) }
+                }
+                if (status == "paused" && st != "ended") {
+                    if (pauseJob?.isActive != true) pauseJob = scope.launch {
+                        delay(PAUSE_RELEASE_MS)
+                        if (_state.value.player.status == "paused") {
+                            releasedAtMs = _state.value.player.posMs
+                            player?.command("release")
+                        }
+                    }
+                } else {
+                    pauseJob?.cancel()
+                }
                 if (st == "ended" && !ad) next()
             }
         }
@@ -424,6 +464,7 @@ class PartyController(
         o.put("playlist", s.playlistTitle ?: JSONObject.NULL)
         o.put("repeat", s.repeat)
         o.put("volume", s.volume)
+        o.put("problem", s.loadProblem ?: JSONObject.NULL)
         o.put("notice", s.notice ?: JSONObject.NULL)
         val visibleProposals = if (isHost) s.proposals else s.proposals.filter { it.byId == viewerId }
         o.put("proposals", visibleProposals.toJsonArray { it.toJson() })
@@ -457,5 +498,8 @@ class PartyController(
 
         /** How long the old song takes to fade out when a song is changed by hand. */
         const val FADE_MS = 2_000
+
+        /** A pause this long releases the player pages (a forgotten pause must not drain the battery). */
+        const val PAUSE_RELEASE_MS = 10 * 60_000L
     }
 }

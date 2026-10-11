@@ -30,6 +30,9 @@ import org.json.JSONArray
 import org.json.JSONObject
 import kotlin.time.Duration.Companion.seconds
 
+/** Position-only updates are pushed to guests at most this often. */
+private const val POSITION_PUSH_NS = 4_000_000_000L
+
 private fun tokenOf(call: ApplicationCall): String? =
     call.request.header("Authorization")?.removePrefix("Bearer ")?.trim()
 
@@ -125,10 +128,11 @@ fun Application.partyModule(party: PartyController, indexHtml: String) {
 
         // ---- host-only
         post("/api/proposals/{id}/{action}") {
-            handle(party, call, hostOnly = true) { _, _ ->
+            handle(party, call, hostOnly = true) { _, body ->
                 val id = call.parameters["id"].orEmpty()
                 when (call.parameters["action"]) {
-                    "approve" -> party.approve(id)
+                    // "place": "next" or "end"; without it the song goes behind other requests, before the playlist
+                    "approve" -> party.approve(id, when (body.optString("place")) { "next" -> true; "end" -> false; else -> null })
                     "reject" -> party.reject(id)
                     else -> throw PartyException("Nieznana akcja")
                 }
@@ -200,7 +204,23 @@ fun Application.partyModule(party: PartyController, indexHtml: String) {
             }
             party.setOnline(user.id, true)
             val pusher = launch {
-                party.state.collect { send(Frame.Text(party.jsonFor(user.id))) }
+                // The playback position changes every second; guests interpolate it themselves, so a push that
+                // carries nothing else goes out at most every few seconds (keeps the radio and the CPU asleep longer).
+                var last: Snapshot? = null
+                var lastAt = 0L
+                party.state.collect { s ->
+                    val now = System.nanoTime()
+                    val prev = last
+                    if (prev != null) {
+                        val onlyPosition = s.copy(player = s.player.copy(posMs = 0)) == prev.copy(player = prev.player.copy(posMs = 0))
+                        val expected = prev.player.posMs + if (prev.player.status == "playing") (now - lastAt) / 1_000_000 else 0
+                        val jumped = kotlin.math.abs(s.player.posMs - expected) > 2_500
+                        if (onlyPosition && !jumped && now - lastAt < POSITION_PUSH_NS) return@collect
+                    }
+                    last = s
+                    lastAt = now
+                    send(Frame.Text(party.jsonFor(user.id)))
+                }
             }
             try {
                 for (frame in incoming) { /* clients only listen */ }

@@ -10,6 +10,12 @@ git tag `v<version>`.
 ## [0.2.1] - 2026-10-08
 
 ### Added
+- Approving a guest's proposal now offers the same two icon buttons as search - an arrow to the top ("jako następna") and an arrow
+  to the bottom ("na koniec kolejki") - in the app and on the guest page (`POST /api/proposals/{id}/approve` takes `{"place":"next"|"end"}`).
+- When a song does not start within 20 s the app says why (no internet, network without access, Data Saver, Android's sleep
+  mode blocking the network, a page load error, battery saver, or simply a slow start); the message shows under the player,
+  on the guest page, and disappears when the song plays.
+- *Nie wygaszaj ekranu* switch (Zaproś tab); the screen is no longer kept on by default.
 - Search in the app: *Szukaj piosenki do dodania* at the top of the queue opens a full-screen search (title, artist or link). Every
   result has two icon buttons - an arrow pointing to the top of a list ("jako następna") and one pointing to the bottom
   ("na koniec kolejki"); the search stays open so several songs can be added in a row. The guest page's host search uses
@@ -49,6 +55,9 @@ git tag `v<version>`.
 - Auto-generated YouTube Mixes can be imported from a video page (their songs are read from the page's "up next" list).
 
 ### Fixed
+- The host's pause was undone after ~15 s by the "Play YouTube Video in Background" add-on's recovery loop; it now respects a
+  pause made from the app (the add-on is patched by `scripts/fetch-addons.sh`, the bridge publishes the pause as a DOM attribute).
+- The host search buttons on the guest page no longer carry text, so song titles have room.
 - Held on its side the app left almost no room for YouTube (the player card filled the screen): in landscape the card now sits
   on the left (scrollable) and the tabs, including YouTube, use the rest; the YouTube bar below the page is more compact.
 - The app could crash at startup with "Address already in use" when it was reopened right after being closed; the guest
@@ -61,6 +70,11 @@ git tag `v<version>`.
   and the next song is prepared in advance (see Added).
 
 ### Changed
+- Battery: the screen is not kept on any more by default; the CPU wake lock is held only while a song plays or guests are
+  connected, the Wi-Fi low-latency lock only while guests are connected (both released a minute after they are not needed);
+  position updates to guests go out every ~4 s (the page keeps time itself); the now-playing gradient animates only while music
+  plays; a pause longer than 10 minutes releases the player pages (the song reloads where it stopped when you press play);
+  Gecko may now suspend video decoding in the background (`media.suspend-bkgnd-video`).
 - *Dodaj do kolejki* (host app, pasted link, the host's *Dodaj* on the guest page) puts the song at the **end** of the queue;
   *Jako następny* still puts it first, and songs approved from guests' proposals still go before the rest of the playlist.
 - The *Dołącz* tab is now *Zaproś*; the *Dodaj* tab is gone (its functions moved to the queue header and the YouTube tab).

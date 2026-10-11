@@ -48,6 +48,16 @@ class PartyApp : Application() {
     private val _themeMode = MutableStateFlow(ThemeMode.AUTO)
     val themeMode: StateFlow<ThemeMode> = _themeMode.asStateFlow()
 
+    private val _keepAwake = MutableStateFlow(false)
+
+    /** Keep the screen on while the app is open. Off by default: the screen is by far the biggest battery user. */
+    val keepAwake: StateFlow<Boolean> = _keepAwake.asStateFlow()
+
+    fun setKeepAwake(on: Boolean) {
+        _keepAwake.value = on
+        getSharedPreferences("ui", MODE_PRIVATE).edit().putBoolean("keepAwake", on).apply()
+    }
+
     /** Auto → light → dark → auto; remembered between runs. */
     fun cycleTheme() {
         val next = _themeMode.value.next()
@@ -73,6 +83,7 @@ class PartyApp : Application() {
         _themeMode.value = runCatching {
             ThemeMode.valueOf(getSharedPreferences("ui", MODE_PRIVATE).getString("theme", null) ?: "AUTO")
         }.getOrDefault(ThemeMode.AUTO)
+        _keepAwake.value = getSharedPreferences("ui", MODE_PRIVATE).getBoolean("keepAwake", false)
         val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
         party = PartyController(getSharedPreferences("party", MODE_PRIVATE), YouTubeClient(), scope)
         player = PlayerBridge(this, runtime).also {
@@ -106,7 +117,7 @@ class PartyApp : Application() {
             )
         }
         GeckoPreferenceController.setGeckoPref("media.block-autoplay-until-in-foreground", false, user)
-        GeckoPreferenceController.setGeckoPref("media.suspend-bkgnd-video.enabled", false, user)
+        GeckoPreferenceController.setGeckoPref("media.suspend-bkgnd-video.enabled", true, user)
     }
 
     private fun installExtensions() {
@@ -139,7 +150,7 @@ class PartyApp : Application() {
             user_pref("media.autoplay.default", 0);
             user_pref("media.autoplay.blocking_policy", 0);
             user_pref("media.block-autoplay-until-in-foreground", false);
-            user_pref("media.suspend-bkgnd-video.enabled", false);
+            user_pref("media.suspend-bkgnd-video.enabled", true);
         """.trimIndent()
         private const val BRIDGE_ID = "bridge@partyqueue.mleczki.pl"
         private val EXTENSIONS = listOf(

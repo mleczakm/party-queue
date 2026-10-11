@@ -14,6 +14,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
@@ -62,12 +64,35 @@ class PlaybackService : Service() {
             }
         }
 
-        wakeLock = getSystemService(PowerManager::class.java)
-            .newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "partyqueue:playback")
-            .apply { acquire(MAX_PARTY_MS) }
+        val power = getSystemService(PowerManager::class.java)
+        wakeLock = power.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "partyqueue:playback")
         wifiLock = applicationContext.getSystemService(WifiManager::class.java)
             .createWifiLock(WifiManager.WIFI_MODE_FULL_LOW_LATENCY, "partyqueue:wifi")
-            .apply { acquire() }
+        // The locks are held only while they are of use: the CPU while a song plays or guests are connected, the
+        // Wi-Fi radio at full attention only while guests are connected. A forgotten, paused party lets go of both.
+        (application as? PartyApp)?.takeIf { it.isPartyReady() }?.let { app ->
+            scope.launch {
+                app.party.state
+                    .map { s -> Needs(cpu = s.player.status in ACTIVE || s.online.isNotEmpty(), wifi = s.online.isNotEmpty()) }
+                    .distinctUntilChanged()
+                    .collectLatest { need ->
+                        // Letting go waits a little, so a skip or a short pause does not flap the locks.
+                        if (!need.cpu) delay(LET_GO_AFTER_MS)
+                        setLock(wakeLock, need.cpu)
+                        if (!need.wifi) delay(LET_GO_AFTER_MS)
+                        setLock(wifiLock, need.wifi)
+                    }
+            }
+        }
+    }
+
+    private data class Needs(val cpu: Boolean, val wifi: Boolean)
+
+    private fun setLock(lock: Any?, on: Boolean) {
+        when (lock) {
+            is PowerManager.WakeLock -> if (on && !lock.isHeld) lock.acquire(MAX_PARTY_MS) else if (!on && lock.isHeld) lock.release()
+            is WifiManager.WifiLock -> if (on && !lock.isHeld) lock.acquire() else if (!on && lock.isHeld) lock.release()
+        }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int) = START_STICKY
@@ -83,6 +108,8 @@ class PlaybackService : Service() {
 
     private companion object {
         const val CHANNEL = "playback"
+        val ACTIVE = setOf("playing", "loading", "ad")
+        const val LET_GO_AFTER_MS = 60_000L
         /** Safety net: no party lasts longer than this; the wake lock must not outlive a forgotten session. */
         const val MAX_PARTY_MS = 12 * 60 * 60 * 1000L
     }
