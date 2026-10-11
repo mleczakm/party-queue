@@ -21,6 +21,9 @@ git tag `v<version>`.
 - Website in Polish and English at https://party-queue.github.io and an organisation page (https://github.com/party-queue), with
   screenshots, a full description of the features and install/update instructions.
 
+### Fixed
+- The round + button sits above YouTube's own bottom bar and out of the way of the keyboard.
+
 ### Changed
 - With system animations turned off (Android accessibility settings) long titles no longer scroll.
 - The project moved to the GitHub organisation `party-queue` (https://github.com/party-queue/party-queue).
