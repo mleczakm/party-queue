@@ -36,6 +36,19 @@ jobs:
           "$sm" "platforms;android-37.1" "build-tools;37.0.0"
       - uses: gradle/actions/setup-gradle@v4
 
+      - name: Use the project signing key
+        env:
+          SIGNING_KEYSTORE_B64: ${{ secrets.SIGNING_KEYSTORE_B64 }}
+        run: |
+          # Same key as the local builds (see scripts/set-signing-secret.sh); without the secret (forks) Gradle makes a debug key.
+          if [ -n "$SIGNING_KEYSTORE_B64" ]; then
+            mkdir -p ~/.android
+            echo "$SIGNING_KEYSTORE_B64" | base64 -d > ~/.android/debug.keystore
+            echo "Signing with the project key"
+          else
+            echo "No SIGNING_KEYSTORE_B64 secret: signing with a throw-away debug key"
+          fi
+
       - name: Lint, test, assemble
         run: ./gradlew lintDebug testDebugUnitTest assembleRelease --console=plain
 
@@ -50,6 +63,6 @@ jobs:
           awk -v v="$version" '$0 ~ "^## \\[" v "\\]" {on=1; next} /^## \[/ {on=0} on' CHANGELOG.md > notes.md
           {
             echo
-            echo "> This APK is signed with the public Android debug key so it can be sideloaded (Android 10+, arm64); it is not a Play Store build. Verify the download against the attached .sha256 file."
+            echo "> This APK is signed with the project's own debug-grade key so it can be sideloaded (Android 10+, arm64) and installs over builds made on the maintainer's computer; it is not a Play Store build. Verify the download against the attached .sha256 file."
           } >> notes.md
           gh release create "$GITHUB_REF_NAME" "$apk" "$apk.sha256" --title "Party Queue $version" --notes-file notes.md

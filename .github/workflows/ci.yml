@@ -40,6 +40,19 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v4
 
+      - name: Use the project signing key
+        env:
+          SIGNING_KEYSTORE_B64: ${{ secrets.SIGNING_KEYSTORE_B64 }}
+        run: |
+          # Same key as the local builds (see scripts/set-signing-secret.sh); without the secret (forks) Gradle makes a debug key.
+          if [ -n "$SIGNING_KEYSTORE_B64" ]; then
+            mkdir -p ~/.android
+            echo "$SIGNING_KEYSTORE_B64" | base64 -d > ~/.android/debug.keystore
+            echo "Signing with the project key"
+          else
+            echo "No SIGNING_KEYSTORE_B64 secret: signing with a throw-away debug key"
+          fi
+
       - name: Lint, test, assemble
         run: ./gradlew lintDebug testDebugUnitTest assembleDebug assembleRelease --console=plain
 

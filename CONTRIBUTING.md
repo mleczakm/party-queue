@@ -31,3 +31,16 @@ and the changelog, runs lint and tests, and publishes a GitHub release with the 
 - `PartyApp.onCreate` runs in every Gecko child process. Create the runtime only in the main process.
 - Do not commit the third-party add-ons; edit `addons.lock` (URL and SHA-256) to update them.
 - Never log or commit the host token; it lives only in the app's private storage.
+
+## Signing key (maintainers)
+
+Builds are signed with the debug key. Locally that is `~/.android/debug.keystore`, which Gradle creates on first use;
+CI restores the same file from the repository secret `SIGNING_KEYSTORE_B64`, so an APK from a GitHub release installs over the
+app built on your computer (and vice versa) without uninstalling it. Set it up once:
+
+```bash
+scripts/set-signing-secret.sh        # publishes ~/.android/debug.keystore as the secret
+```
+
+If the secret is missing (forks, a fresh repository) CI signs with a throw-away key: the APK works, but cannot update an app signed
+with another key. Check which key an APK carries with `apksigner verify --print-certs app-release.apk`.

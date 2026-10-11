@@ -34,7 +34,8 @@ android {
     buildTypes {
         release {
             // Not minified (GeckoView, Ktor and Compose would need keep rules) but optimised and not debuggable.
-            // Signed with the public debug key so it can be sideloaded; a real store release needs its own key.
+            // Signed with the debug key so it can be sideloaded: ~/.android/debug.keystore locally and, on CI, the same file restored
+            // from the SIGNING_KEYSTORE_B64 secret (scripts/set-signing-secret.sh). A store release would need its own key.
             isMinifyEnabled = false
             signingConfig = signingConfigs.getByName("debug")
         }
