@@ -66,6 +66,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
@@ -1230,9 +1231,10 @@ private fun BrowseTab(app: PartyApp, party: PartyController, chromeShown: Boolea
             )
         }
 
-        // The "+" button, with a speech bubble while there is nothing on the page to add.
-        Row(
-            Modifier.align(Alignment.BottomEnd).padding(end = 16.dp, bottom = 16.dp),
+        // The "+" button, with a speech bubble while there is nothing on the page to add (hidden while the keyboard is up).
+        val keyboardUp = WindowInsets.ime.getBottom(LocalDensity.current) > 0
+        if (!keyboardUp) Row(
+            Modifier.align(Alignment.BottomEnd).padding(end = 16.dp, bottom = 80.dp), // above YouTube's own bottom bar
             verticalAlignment = Alignment.CenterVertically,
         ) {
             AnimatedVisibility(!canAdd, enter = fadeIn(), exit = fadeOut()) {
