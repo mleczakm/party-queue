@@ -338,6 +338,13 @@ fun QueuePlaceGlyph(color: Color, toEnd: Boolean, size: Dp = 22.dp) = Canvas(Mod
     drawLine(color, Offset(x, tip), Offset(x + w * 0.12f, tip + dir * h * 0.14f), stroke, StrokeCap.Round)
 }
 
+@Composable
+fun PlusGlyph(color: Color, size: Dp = 26.dp) = Canvas(Modifier.size(size)) {
+    val s = this.size.minDimension
+    drawLine(color, Offset(s * 0.5f, s * 0.2f), Offset(s * 0.5f, s * 0.8f), s * 0.12f, StrokeCap.Round)
+    drawLine(color, Offset(s * 0.2f, s * 0.5f), Offset(s * 0.8f, s * 0.5f), s * 0.12f, StrokeCap.Round)
+}
+
 // ------------------------------------------------------------------ surfaces
 
 /** A card whose gradient slowly drifts: the "now playing" panel. [t] is read in the draw phase only. */

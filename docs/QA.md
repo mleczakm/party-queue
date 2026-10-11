@@ -92,6 +92,10 @@ Use a real phone, not an emulator. Note the phone model and Android version in t
 - [ ] *Wyczyść kolejkę* asks for confirmation, empties the queue, keeps the current song, and the queue does not refill itself.
 
 **Browsing and importing (YouTube tab)**
+- [ ] The address bar shows the page; tapping it clears it; a search (`daft punk`), a video link and a playlist link each open the right YouTube page.
+- [ ] Scrolling the page down hides the title bar, player card, tabs and address bar (the page grows); scrolling up a little brings them back; no flicker or jump while they move.
+- [ ] The "+" button is grey with the bubble *Znajdź playlistę lub film* on the home page and search results; on a video or playlist page it turns colourful and the bubble goes.
+- [ ] Tapping "+" on a playlist slides up the panel (shuffle, *Ustaw jako aktualną playlistę*); on a video, the two arrow buttons; the panel closes after use and when the page changes, and never stays over the page on its own.
 - [ ] The tab shows one YouTube page; the player is not visible as a second window.
 - [ ] Open a public playlist page: only *Ustaw jako aktualną playlistę* (and the shuffle switch) is offered; it fills the queue and does **not** interrupt the song that is playing.
 - [ ] On the home page no import buttons are shown. After signing in, the sign-in button is gone.

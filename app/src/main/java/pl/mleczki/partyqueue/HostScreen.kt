@@ -9,6 +9,14 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.widget.Toast
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.EnterTransition
@@ -148,6 +156,10 @@ import kotlin.math.roundToInt
 
 private const val BROWSE_TAB = 3
 
+/** How far the YouTube page must scroll before the app's bars hide (down) or return (up). */
+private const val SCROLL_HIDE_PX = 120f
+private const val SCROLL_SHOW_PX = 60f
+
 /** The title bar hides after this long without a touch. */
 private const val HEADER_HIDE_MS = 8_000L
 
@@ -186,6 +198,26 @@ fun HostApp(app: PartyApp, themeMode: ThemeMode, initialTab: Int = 0, initialPre
     var preview by rememberSaveable { mutableStateOf(Preview.entries[initialPreview.coerceIn(0, 2)]) }
     var tab by rememberSaveable { mutableIntStateOf(initialTab) }
     var searchOpen by rememberSaveable { mutableStateOf(false) }
+    // While the YouTube page is scrolled down the app's bars get out of its way; scrolling up brings them back.
+    var browseChrome by rememberSaveable { mutableStateOf(true) }
+    val chrome = tab != BROWSE_TAB || browseChrome
+    var scrollAcc by remember { mutableFloatStateOf(0f) }
+    var toggledAt by remember { mutableLongStateOf(0L) }
+    val onBrowseScroll: (Int, Int) -> Unit = { dy, y ->
+        val now = System.currentTimeMillis()
+        // Hiding or showing resizes the page, which itself moves its scroll position: ignore that moment.
+        if (now - toggledAt > 600) {
+            scrollAcc = if (dy == 0 || (dy > 0) != (scrollAcc > 0)) dy.toFloat() else scrollAcc + dy
+            if (y <= 0 || scrollAcc < -SCROLL_SHOW_PX) {
+                if (!browseChrome) { browseChrome = true; toggledAt = now }
+                scrollAcc = 0f
+            } else if (scrollAcc > SCROLL_HIDE_PX) {
+                if (browseChrome) { browseChrome = false; toggledAt = now }
+                scrollAcc = 0f
+            }
+        }
+    }
+    LaunchedEffect(tab) { browseChrome = true }
     val full = preview == Preview.Full
 
     // The title bar gets out of the way after a while; dragging down anywhere (or the little handle) brings it back.
@@ -220,7 +252,7 @@ fun HostApp(app: PartyApp, themeMode: ThemeMode, initialTab: Int = 0, initialPre
                 }
             }
     ) {
-        PartyHeader(themeMode, playing, headerShown, onReveal = { headerShown = true; lastTouch = System.currentTimeMillis() }) { app.cycleTheme() }
+        PartyHeader(themeMode, playing, headerShown && chrome, onReveal = { headerShown = true; browseChrome = true; lastTouch = System.currentTimeMillis() }) { app.cycleTheme() }
 
         // Never under the navigation bar or a camera cut-out; the page itself must also stay clear of the bars.
         BoxWithConstraints(
@@ -280,12 +312,14 @@ fun HostApp(app: PartyApp, themeMode: ThemeMode, initialTab: Int = 0, initialPre
                 }
             }
             val tabsArea: @Composable ColumnScope.() -> Unit = {
-                PartyTabs(
-                    labels = listOf("Kolejka", "Propozycje", "Zaproś", "YouTube"),
-                    badges = listOf(0, proposalCount, requestCount, 0),
-                    selected = tab,
-                    onSelect = { tab = it },
-                )
+                AnimatedVisibility(chrome, enter = expandVertically() + fadeIn(), exit = shrinkVertically() + fadeOut()) {
+                    PartyTabs(
+                        labels = listOf("Kolejka", "Propozycje", "Zaproś", "YouTube"),
+                        badges = listOf(0, proposalCount, requestCount, 0),
+                        selected = tab,
+                        onSelect = { tab = it },
+                    )
+                }
                 Box(Modifier.weight(1f).fillMaxWidth()) {
                     AnimatedContent(
                         targetState = tab,
@@ -303,7 +337,7 @@ fun HostApp(app: PartyApp, themeMode: ThemeMode, initialTab: Int = 0, initialPre
                             0 -> QueueTab(state, party) { searchOpen = true }
                             1 -> ProposalsTab(state, party)
                             2 -> InviteTab(state, party, app.server.port, keepAwake) { app.setKeepAwake(it) }
-                            else -> BrowseTab(app, party)
+                            else -> BrowseTab(app, party, chrome, onBrowseScroll)
                         }
                     }
                 }
@@ -320,7 +354,9 @@ fun HostApp(app: PartyApp, themeMode: ThemeMode, initialTab: Int = 0, initialPre
             } else {
                 Column(Modifier.fillMaxSize()) {
                     playerPane(if (paneHeight == null) Modifier.fillMaxWidth().weight(1f) else Modifier.fillMaxWidth().height(paneHeight))
-                    playerCard()
+                    AnimatedVisibility(chrome, enter = expandVertically() + fadeIn(), exit = shrinkVertically() + fadeOut()) {
+                        Column { playerCard() }
+                    }
                     if (!full) tabsArea()
                 }
             }
@@ -1102,10 +1138,15 @@ private fun InviteTab(state: State<Snapshot>, party: PartyController, port: Int,
     }
 }
 
-/** A real YouTube page the host can browse; the bar below offers only what makes sense for the page showing. */
+/**
+ * A real YouTube page the host browses. The address bar on top takes a link or a search; the round "+" button
+ * (grey while the page has nothing to add) slides up a panel with what can be done with the playlist or video showing.
+ * [chromeShown] is false while the page is scrolled down: the app's own bars and the address bar then make room for it.
+ */
 @Composable
-private fun BrowseTab(app: PartyApp, party: PartyController) {
+private fun BrowseTab(app: PartyApp, party: PartyController, chromeShown: Boolean, onScroll: (dy: Int, y: Int) -> Unit) {
     val bridge = app.player
+    val ctx = LocalContext.current
     val url by bridge.browseUrl.collectAsStateWithLifecycle()
     val signedIn by bridge.signedIn.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
@@ -1113,18 +1154,31 @@ private fun BrowseTab(app: PartyApp, party: PartyController) {
     var shuffle by rememberSaveable { mutableStateOf(false) }
     var busy by remember { mutableStateOf(false) }
     var message by remember { mutableStateOf<String?>(null) }
-    var pasteOpen by remember { mutableStateOf(false) }
-    var pasted by rememberSaveable { mutableStateOf("") }
+    var panelOpen by rememberSaveable { mutableStateOf(false) }
 
     val listId = YouTubeClient.parsePlaylistId(url)
     val videoId = YouTubeClient.parseVideoId(url).takeIf { "/watch" in url || "/shorts/" in url }
     val isMix = listId?.startsWith("RD") == true
+    val canAdd = listId != null || videoId != null
+
+    DisposableEffect(Unit) {
+        bridge.browseScrollListener = onScroll
+        onDispose { bridge.browseScrollListener = null }
+    }
+    // A new page: the panel belongs to the old one.
+    LaunchedEffect(url) { panelOpen = false; message = null }
 
     fun work(block: suspend () -> String) {
         scope.launch {
             busy = true
             message = null
-            message = try { block() } catch (e: Exception) { e.message ?: "Błąd" }
+            try {
+                val done = block()
+                Toast.makeText(ctx, done, Toast.LENGTH_LONG).show()
+                panelOpen = false
+            } catch (e: Exception) {
+                message = e.message ?: "Błąd"
+            }
             busy = false
         }
     }
@@ -1152,92 +1206,159 @@ private fun BrowseTab(app: PartyApp, party: PartyController) {
         "Aktualna playlista: „${party.state.value.playlistTitle}”. W kolejce: ${party.state.value.queue.size}."
     }
 
-    Column(Modifier.fillMaxSize()) {
-        AndroidView(
-            modifier = Modifier.weight(1f).fillMaxWidth(),
-            factory = { ctx -> GeckoView(ctx).also { it.setSession(bridge.browseSession()) } },
-            onRelease = { it.releaseSession() },
-        )
-        Surface(tonalElevation = 3.dp, color = MaterialTheme.colorScheme.surfaceContainerHigh) {
-            Column(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 4.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                if (listId != null) {
+    Box(Modifier.fillMaxSize()) {
+        Column(Modifier.fillMaxSize()) {
+            AnimatedVisibility(chromeShown, enter = expandVertically() + fadeIn(), exit = shrinkVertically() + fadeOut()) {
+                AddressBar(
+                    url = url,
+                    signedIn = signedIn,
+                    onGo = { text -> BrowseInput.resolve(text)?.let(bridge::browseTo) },
+                    onLogin = { bridge.browseTo("https://accounts.google.com/ServiceLogin?service=youtube&continue=https%3A%2F%2Fm.youtube.com%2F") },
+                )
+            }
+            AndroidView(
+                modifier = Modifier.weight(1f).fillMaxWidth(),
+                factory = { c -> GeckoView(c).also { it.setSession(bridge.browseSession()) } },
+                onRelease = { it.releaseSession() },
+            )
+        }
+
+        // The "+" button, with a speech bubble while there is nothing on the page to add.
+        Row(
+            Modifier.align(Alignment.BottomEnd).padding(end = 16.dp, bottom = 16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            AnimatedVisibility(!canAdd, enter = fadeIn(), exit = fadeOut()) {
+                Surface(
+                    shape = RoundedCornerShape(16.dp),
+                    color = MaterialTheme.colorScheme.inverseSurface,
+                    shadowElevation = 4.dp,
+                    modifier = Modifier.padding(end = 10.dp),
+                ) {
+                    Text(
+                        "Znajdź playlistę lub film",
+                        Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                        color = MaterialTheme.colorScheme.inverseOnSurface,
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+            }
+            val fabScale by animateFloatAsState(if (canAdd) 1f else 0.9f, tween(200), label = "fab")
+            Box(
+                Modifier
+                    .size(58.dp)
+                    .scale(fabScale)
+                    .shadow(if (canAdd) 8.dp else 0.dp, CircleShape)
+                    .clip(CircleShape)
+                    .background(if (canAdd) Brand.diagonal() else Brush.linearGradient(listOf(Color(0xFF8A8499), Color(0xFF8A8499))), alpha = if (canAdd) 1f else 0.55f)
+                    .clickable(enabled = canAdd) { panelOpen = !panelOpen },
+                contentAlignment = Alignment.Center,
+            ) { PlusGlyph(Color.White, 30.dp) }
+        }
+
+        // The options for what is showing: a panel that comes up from the bottom and goes away again.
+        AnimatedVisibility(
+            visible = panelOpen && canAdd,
+            modifier = Modifier.align(Alignment.BottomCenter),
+            enter = slideInVertically(tween(260)) { it } + fadeIn(tween(200)),
+            exit = slideOutVertically(tween(200)) { it } + fadeOut(tween(160)),
+        ) {
+            Surface(
+                shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
+                color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                shadowElevation = 16.dp,
+            ) {
+                Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Switch(shuffle, { shuffle = it }, Modifier.scale(0.85f))
-                        Text("Losowa kolejność", style = MaterialTheme.typography.bodySmall)
-                    }
-                    GradientButton("Ustaw jako aktualną playlistę", { setPlaylist(listId) }, Modifier.fillMaxWidth(), enabled = !busy)
-                    if (isMix) {
                         Text(
-                            "Mix: trafią do kolejki utwory widoczne teraz w mixie (zwykle ok. 25).",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                }
-                if (videoId != null) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                        GradientButton("Dodaj do kolejki", {
-                            work { party.enqueue(party.yt.meta(videoId), "Host", Source.HOST, atEnd = true); "Dodano na koniec kolejki" }
-                        }, Modifier.weight(1f), enabled = !busy)
-                        OutlinedButton(onClick = {
-                            work { party.enqueue(party.yt.meta(videoId), "Host", Source.HOST, playNext = true); "Zagra jako następny" }
-                        }, enabled = !busy, modifier = Modifier.weight(1f)) { Text("Jako następny") }
-                    }
-                }
-                AnimatedVisibility(message != null) {
-                    Text(message.orEmpty(), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
-                }
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    if (listId == null && videoId == null && LocalConfiguration.current.orientation != Configuration.ORIENTATION_LANDSCAPE) {
-                        Text(
-                            "Znajdź playlistę lub film. Na stronie playlisty pojawi się przycisk ustawienia jej jako aktualnej.",
+                            if (listId != null) (if (isMix) "Mix" else "Playlista") else "Film",
                             Modifier.weight(1f),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            style = MaterialTheme.typography.titleSmall,
                         )
+                        Box(Modifier.size(36.dp).clip(CircleShape).clickable { panelOpen = false }, contentAlignment = Alignment.Center) {
+                            CloseGlyph(MaterialTheme.colorScheme.onSurfaceVariant, 18.dp)
+                        }
                     }
-                    TextButton(onClick = { pasteOpen = true }, contentPadding = PaddingValues(horizontal = 4.dp)) { Text("Wklej link") }
-                    if (!signedIn) {
-                        TextButton(
-                            onClick = { bridge.browseTo("https://accounts.google.com/ServiceLogin?service=youtube&continue=https%3A%2F%2Fm.youtube.com%2F") },
-                            contentPadding = PaddingValues(horizontal = 4.dp),
-                        ) { Text("Zaloguj się, aby dodać prywatne playlisty", fontSize = 13.sp) }
+                    if (listId != null) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Switch(shuffle, { shuffle = it }, Modifier.scale(0.85f))
+                            Text("Losowa kolejność", style = MaterialTheme.typography.bodyMedium)
+                        }
+                        GradientButton("Ustaw jako aktualną playlistę", { setPlaylist(listId) }, Modifier.fillMaxWidth(), enabled = !busy)
+                        if (isMix) {
+                            Text(
+                                "Mix: trafią do kolejki utwory widoczne teraz w mixie (zwykle ok. 25).",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    } else if (videoId != null) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            PlaceAction("Jako następna", toEnd = false, enabled = !busy, modifier = Modifier.weight(1f)) {
+                                work { party.enqueue(party.yt.meta(videoId), "Host", Source.HOST, playNext = true); "Zagra jako następna" }
+                            }
+                            PlaceAction("Na koniec kolejki", toEnd = true, enabled = !busy, modifier = Modifier.weight(1f)) {
+                                work { party.enqueue(party.yt.meta(videoId), "Host", Source.HOST, atEnd = true); "Dodano na koniec kolejki" }
+                            }
+                        }
+                    }
+                    AnimatedVisibility(message != null) {
+                        Text(message.orEmpty(), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
                     }
                 }
             }
         }
     }
+}
 
-    if (pasteOpen) {
-        AlertDialog(
-            onDismissRequest = { pasteOpen = false },
-            title = { Text("Wklej link") },
-            text = {
-                Column {
-                    Text("Link do filmu albo do publicznej playlisty z YouTube.", style = MaterialTheme.typography.bodySmall)
-                    OutlinedTextField(pasted, { pasted = it }, singleLine = true, modifier = Modifier.fillMaxWidth().padding(top = 8.dp), label = { Text("youtube.com/…") })
-                }
+/** A button with the arrow-and-list icon and its label, for adding a video as the next song or at the end of the queue. */
+@Composable
+private fun PlaceAction(label: String, toEnd: Boolean, enabled: Boolean, modifier: Modifier = Modifier, onClick: () -> Unit) {
+    Row(
+        modifier
+            .clip(RoundedCornerShape(50))
+            .background(if (toEnd) Brand.horizontal() else Brush.horizontalGradient(listOf(Brand.Violet, Brand.Blue)))
+            .alpha(if (enabled) 1f else 0.5f)
+            .clickable(enabled = enabled, onClick = onClick)
+            .padding(horizontal = 14.dp, vertical = 12.dp),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        QueuePlaceGlyph(Color.White, toEnd = toEnd, size = 24.dp)
+        Spacer(Modifier.width(8.dp))
+        Text(label, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp, maxLines = 1)
+    }
+}
+
+/** Shows the page's address; type a search or paste a link and press Go. Scrolls away with the rest of the bars. */
+@Composable
+private fun AddressBar(url: String, signedIn: Boolean, onGo: (String) -> Unit, onLogin: () -> Unit) {
+    var text by remember { mutableStateOf("") }
+    var focused by remember { mutableStateOf(false) }
+    val focusManager = LocalFocusManager.current
+    // Follows the page, unless the host is typing.
+    LaunchedEffect(url, focused) { if (!focused) text = BrowseInput.display(url) }
+    Row(
+        Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surfaceContainerHigh).padding(horizontal = 8.dp, vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        OutlinedTextField(
+            value = text,
+            onValueChange = { text = it },
+            singleLine = true,
+            placeholder = { Text("Szukaj albo wklej link do YouTube", maxLines = 1, overflow = TextOverflow.Ellipsis) },
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Go, keyboardType = KeyboardType.Uri),
+            keyboardActions = KeyboardActions(onGo = { focusManager.clearFocus(); onGo(text) }),
+            textStyle = MaterialTheme.typography.bodyMedium,
+            shape = RoundedCornerShape(50),
+            modifier = Modifier.weight(1f).onFocusChanged { state ->
+                if (state.isFocused && !focused) text = ""   // typing replaces the old address; a paste is what is usually wanted
+                focused = state.isFocused
             },
-            confirmButton = {
-                TextButton(onClick = {
-                    val link = pasted
-                    pasteOpen = false
-                    pasted = ""
-                    work {
-                        val list = YouTubeClient.parsePlaylistId(link)
-                        val vid = YouTubeClient.parseVideoId(link)
-                        when {
-                            list != null && !list.startsWith("RD") -> {
-                                party.loadPlaylist(link, shuffle)
-                                "Aktualna playlista: „${party.state.value.playlistTitle}”."
-                            }
-                            vid != null -> { party.enqueue(party.yt.meta(vid), "Host", Source.HOST, atEnd = true); "Dodano na koniec kolejki" }
-                            else -> throw PartyException("To nie wygląda na link do filmu ani playlisty z YouTube")
-                        }
-                    }
-                }, enabled = pasted.isNotBlank()) { Text("Dodaj") }
-            },
-            dismissButton = { TextButton(onClick = { pasteOpen = false }) { Text("Anuluj") } },
+            leadingIcon = { SearchGlyph(MaterialTheme.colorScheme.onSurfaceVariant, 20.dp) },
         )
+        if (!signedIn) {
+            TextButton(onClick = onLogin, contentPadding = PaddingValues(horizontal = 8.dp)) { Text("Zaloguj się", fontSize = 13.sp) }
+        }
     }
 }

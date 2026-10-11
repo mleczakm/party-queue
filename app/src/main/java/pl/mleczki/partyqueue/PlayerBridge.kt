@@ -77,6 +77,10 @@ class PlayerBridge(private val context: Context, private val runtime: GeckoRunti
     private var loadStartedId = ""
 
     private var browse: GeckoSession? = null
+
+    /** Told how far the browse page scrolled (dy) and where it is (y); called on the main thread. */
+    var browseScrollListener: ((dy: Int, y: Int) -> Unit)? = null
+    private var lastBrowseY = 0
     private val _browseUrl = MutableStateFlow("")
     val browseUrl: StateFlow<String> = _browseUrl.asStateFlow()
     private var pendingImport: CompletableDeferred<String>? = null
@@ -407,6 +411,15 @@ class PlayerBridge(private val context: Context, private val runtime: GeckoRunti
                 hasUserGesture: Boolean,
             ) {
                 _browseUrl.value = url.orEmpty().removeSuffix("&pqimport=1").removeSuffix("?pqimport=1")
+                lastBrowseY = 0
+            }
+        }
+        // Lets the app's own bars scroll away with the YouTube page.
+        s.scrollDelegate = object : GeckoSession.ScrollDelegate {
+            override fun onScrollChanged(session: GeckoSession, scrollX: Int, scrollY: Int) {
+                val dy = scrollY - lastBrowseY
+                lastBrowseY = scrollY
+                browseScrollListener?.invoke(dy, scrollY)
             }
         }
         browse = s

@@ -12,6 +12,14 @@ git tag `v<version>`.
 ## [0.2.1] - 2026-10-08
 
 ### Added
+- YouTube tab redesigned: an address bar on top (type a search or paste a video/playlist link; a playlist link opens the playlist),
+  the page takes the whole screen - the app's title bar, player card, tabs and the address bar scroll away while the page is
+  scrolled down and return when you scroll up - and a round "+" button replaces the permanent bottom bar. The "+" is grey (with
+  a speech bubble "Znajdź playlistę lub film") while the page has nothing to add; on a playlist or video page it slides up a panel
+  with the options (playlist: shuffle + *Ustaw jako aktualną playlistę*; video: next / end of the queue with the arrow icons) that
+  goes away again after use. *Wklej link* is gone (the address bar does that).
+- CI signs its APKs with the same key as local builds (`scripts/set-signing-secret.sh` stores `~/.android/debug.keystore` as the
+  secret `SIGNING_KEYSTORE_B64`), so a release from GitHub installs over a locally built app and vice versa.
 - Approving a guest's proposal now offers the same two icon buttons as search - an arrow to the top ("jako następna") and an arrow
   to the bottom ("na koniec kolejki") - in the app and on the guest page (`POST /api/proposals/{id}/approve` takes `{"place":"next"|"end"}`).
 - When a song does not start within 20 s the app says why (no internet, network without access, Data Saver, Android's sleep
