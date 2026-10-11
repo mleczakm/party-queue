@@ -34,8 +34,8 @@ and the changelog, runs lint and tests, and publishes a GitHub release with the 
 
 ## Signing key (maintainers)
 
-Builds are signed with the debug key. Locally that is `~/.android/debug.keystore`, which Gradle creates on first use;
-CI restores the same file from the repository secret `SIGNING_KEYSTORE_B64`, so an APK from a GitHub release installs over the
+Builds (debug and release) are signed with one key. Locally that is `~/.android/debug.keystore`, which Gradle creates on first use;
+CI restores the same file from the repository secret `SIGNING_KEYSTORE_B64` and points `SIGNING_KEYSTORE` at it (see `app/build.gradle.kts`), so an APK from a GitHub release installs over the
 app built on your computer (and vice versa) without uninstalling it. Set it up once:
 
 ```bash

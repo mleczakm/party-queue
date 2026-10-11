@@ -175,6 +175,13 @@ private fun fmt(ms: Long): String {
     return "%d:%02d".format(s / 60, s % 60)
 }
 
+/** True when the person turned system animations off (Settings → Accessibility): titles then stay still instead of scrolling. */
+@Composable
+private fun rememberReduceMotion(): Boolean {
+    val resolver = LocalContext.current.contentResolver
+    return remember { android.provider.Settings.Global.getFloat(resolver, android.provider.Settings.Global.ANIMATOR_DURATION_SCALE, 1f) == 0f }
+}
+
 private fun toast(ctx: Context, text: String) = Toast.makeText(ctx, text, Toast.LENGTH_SHORT).show()
 
 // =====================================================================================================================
@@ -500,7 +507,7 @@ private fun NowPlaying(state: State<Snapshot>, party: PartyController, preview: 
                         maxLines = 1,
                         softWrap = false,
                         overflow = TextOverflow.Clip,
-                        modifier = Modifier.basicMarquee(iterations = Int.MAX_VALUE, initialDelayMillis = 1_500, repeatDelayMillis = 2_000, spacing = MarqueeSpacing(40.dp), velocity = 28.dp),
+                        modifier = Modifier.basicMarquee(iterations = if (rememberReduceMotion()) 0 else Int.MAX_VALUE, initialDelayMillis = 1_500, repeatDelayMillis = 2_000, spacing = MarqueeSpacing(40.dp), velocity = 28.dp),
                     )
                     Text(
                         when {
@@ -663,7 +670,7 @@ private fun TrackCard(
                         overflow = TextOverflow.Clip,
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.basicMarquee(iterations = Int.MAX_VALUE, initialDelayMillis = 1_500, repeatDelayMillis = 2_000, spacing = MarqueeSpacing(40.dp), velocity = 28.dp),
+                        modifier = Modifier.basicMarquee(iterations = if (rememberReduceMotion()) 0 else Int.MAX_VALUE, initialDelayMillis = 1_500, repeatDelayMillis = 2_000, spacing = MarqueeSpacing(40.dp), velocity = 28.dp),
                     )
                     Text(subtitle, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }

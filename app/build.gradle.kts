@@ -28,16 +28,33 @@ android {
         versionName = appVersionName
     }
 
+    // One signing key for local and CI builds, debug and release, so APKs from anywhere install over each other: the keystore
+    // named by SIGNING_KEYSTORE (CI restores it from the SIGNING_KEYSTORE_B64 secret, see scripts/set-signing-secret.sh), else
+    // ~/.android/debug.keystore. Without either, Android's own debug key is used.
+    val projectKeystore = File(System.getenv("SIGNING_KEYSTORE") ?: "${System.getProperty("user.home")}/.android/debug.keystore")
+    val signing = if (projectKeystore.exists()) {
+        signingConfigs.create("project") {
+            storeFile = projectKeystore
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+        }
+    } else {
+        signingConfigs.getByName("debug")
+    }
+
     buildFeatures {
         compose = true
     }
     buildTypes {
+        debug {
+            signingConfig = signing
+        }
         release {
             // Not minified (GeckoView, Ktor and Compose would need keep rules) but optimised and not debuggable.
-            // Signed with the debug key so it can be sideloaded: ~/.android/debug.keystore locally and, on CI, the same file restored
-            // from the SIGNING_KEYSTORE_B64 secret (scripts/set-signing-secret.sh). A store release would need its own key.
+            // Sideloadable, signed with the key above; a store release would need its own key.
             isMinifyEnabled = false
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signing
         }
     }
     compileOptions {

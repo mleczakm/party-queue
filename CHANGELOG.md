@@ -122,8 +122,8 @@ First public version.
   pause itself; the app's own pause button still works. The bridge also acts only on the page's main `<video>`
   element instead of any spare one.
 
-[Unreleased]: https://github.com/mleczakm/party-queue/compare/v0.2.2...HEAD
-[0.2.2]: https://github.com/mleczakm/party-queue/compare/v0.2.1...v0.2.2
-[0.2.1]: https://github.com/mleczakm/party-queue/compare/v0.2.0...v0.2.1
-[0.2.0]: https://github.com/mleczakm/party-queue/compare/v0.1.0...v0.2.0
-[0.1.0]: https://github.com/mleczakm/party-queue/releases/tag/v0.1.0
+[Unreleased]: https://github.com/party-queue/party-queue/compare/v0.2.2...HEAD
+[0.2.2]: https://github.com/party-queue/party-queue/compare/v0.2.1...v0.2.2
+[0.2.1]: https://github.com/party-queue/party-queue/compare/v0.2.0...v0.2.1
+[0.2.0]: https://github.com/party-queue/party-queue/compare/v0.1.0...v0.2.0
+[0.1.0]: https://github.com/party-queue/party-queue/releases/tag/v0.1.0

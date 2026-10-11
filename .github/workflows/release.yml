@@ -40,10 +40,10 @@ jobs:
         env:
           SIGNING_KEYSTORE_B64: ${{ secrets.SIGNING_KEYSTORE_B64 }}
         run: |
-          # Same key as the local builds (see scripts/set-signing-secret.sh); without the secret (forks) Gradle makes a debug key.
+          # Same key as the local builds (see scripts/set-signing-secret.sh); without the secret (forks) Android's own debug key is used.
           if [ -n "$SIGNING_KEYSTORE_B64" ]; then
-            mkdir -p ~/.android
-            echo "$SIGNING_KEYSTORE_B64" | base64 -d > ~/.android/debug.keystore
+            echo "$SIGNING_KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/signing.keystore"
+            echo "SIGNING_KEYSTORE=$RUNNER_TEMP/signing.keystore" >> "$GITHUB_ENV"
             echo "Signing with the project key"
           else
             echo "No SIGNING_KEYSTORE_B64 secret: signing with a throw-away debug key"
@@ -51,6 +51,11 @@ jobs:
 
       - name: Lint, test, assemble
         run: ./gradlew lintDebug testDebugUnitTest assembleRelease --console=plain
+
+      - name: Show the signing certificate
+        run: |
+          apksigner="$(ls -d "$ANDROID_HOME"/build-tools/*/apksigner | sort -V | tail -1)"
+          "$apksigner" verify --print-certs app/build/outputs/apk/release/app-release.apk | grep "SHA-256"
 
       - name: Publish
         env:

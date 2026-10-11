@@ -23,8 +23,8 @@ import re, sys
 new, old, today = sys.argv[1:4]
 s = open("CHANGELOG.md").read()
 s = s.replace("## [Unreleased]\n", f"## [Unreleased]\n\n## [{new}] - {today}\n", 1)
-s = re.sub(r"^\[Unreleased\]:.*$", f"[Unreleased]: https://github.com/mleczakm/party-queue/compare/v{new}...HEAD", s, flags=re.M)
-link = f"[{new}]: https://github.com/mleczakm/party-queue/compare/v{old}...v{new}"
+s = re.sub(r"^\[Unreleased\]:.*$", f"[Unreleased]: https://github.com/party-queue/party-queue/compare/v{new}...HEAD", s, flags=re.M)
+link = f"[{new}]: https://github.com/party-queue/party-queue/compare/v{old}...v{new}"
 s = s.replace(f"[{old}]:", f"{link}\n[{old}]:", 1)
 open("CHANGELOG.md", "w").write(s)
 PY
