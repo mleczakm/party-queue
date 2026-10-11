@@ -7,6 +7,8 @@ git tag `v<version>`.
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-10-12
+
 ### Added
 - YouTube tab redesigned: an address bar on top (type a search or paste a video/playlist link; a playlist link opens the playlist),
   the page takes the whole screen - the app's title bar, player card, tabs and the address bar scroll away while the page is
@@ -145,7 +147,8 @@ First public version.
   pause itself; the app's own pause button still works. The bridge also acts only on the page's main `<video>`
   element instead of any spare one.
 
-[Unreleased]: https://github.com/party-queue/party-queue/compare/v0.2.2...HEAD
+[Unreleased]: https://github.com/party-queue/party-queue/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/party-queue/party-queue/compare/v0.2.2...v0.3.0
 [0.2.2]: https://github.com/party-queue/party-queue/compare/v0.2.1...v0.2.2
 [0.2.1]: https://github.com/party-queue/party-queue/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/party-queue/party-queue/compare/v0.1.0...v0.2.0
