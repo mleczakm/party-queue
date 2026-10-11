@@ -3,7 +3,7 @@
 #
 #   scripts/make-qr.sh <text-or-url> <output-basename>      e.g.  scripts/make-qr.sh https://example.org/ branding/qr-example
 #
-# Used for branding/qr-download.* (the newest APK) and branding/qr-site.* (the website); the same files are on the website.
+# Used for branding/qr-download.* (the newest APK); the same files are on the website.
 set -euo pipefail
 
 text="${1:?usage: make-qr.sh <text-or-url> <output-basename>}"
