@@ -70,6 +70,11 @@ The page guests and co-hosts see:
 | ![Search with next / end buttons](docs/screenshots/web-search.jpg) | ![Guests](docs/screenshots/web-guests.jpg) |
 | ![A guest's view](docs/screenshots/web-guest-queue.jpg) | ![Phone layout](docs/screenshots/web-mobile.jpg) |
 
+## Free, and it stays that way
+
+Party Queue is, and always will be, **completely free**: no ads, no paid features, no subscriptions, no accounts.
+If you like what I do, you can **[buy me a coffee ☕](https://suppi.pl/mleczakm)** – entirely optional, the app works the same for everyone.
+
 ## Build and install
 
 ```bash

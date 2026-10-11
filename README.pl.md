@@ -70,6 +70,11 @@ Strona, którą widzą goście i współhostowie:
 | ![Wyszukiwanie z przyciskami następna / na koniec](docs/screenshots/web-search.jpg) | ![Goście](docs/screenshots/web-guests.jpg) |
 | ![Widok gościa](docs/screenshots/web-guest-queue.jpg) | ![Układ na telefon](docs/screenshots/web-mobile.jpg) |
 
+## Darmowa – i tak zostanie
+
+Party Queue jest i zawsze będzie **w pełni darmowa**: bez reklam, bez płatnych funkcji, bez subskrypcji, bez kont.
+Jeśli podoba Ci się to, co robię, możesz **[postawić mi kawę ☕](https://suppi.pl/mleczakm)** – całkowicie dobrowolnie, aplikacja działa tak samo dla wszystkich.
+
 ## Dla programistów
 
 Budowanie, testy, architektura i proces wydań są opisane po angielsku w [README.md](README.md), [CONTRIBUTING.md](CONTRIBUTING.md) i [docs/QA.md](docs/QA.md).
